@@ -39,6 +39,12 @@ class OpenFire
 
     return child
 
+  update: (obj) ->
+    po = OpenFire.parentObjects
+
+    po.queue.push(new QueueEntry('update', @path, obj))
+    po.queue.flush()
+
   set: (obj) ->
     # The server will figure out what to do with the path
     po = OpenFire.parentObjects

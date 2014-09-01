@@ -59,6 +59,13 @@
       return child;
     };
 
+    OpenFire.prototype.update = function(obj) {
+      var po;
+      po = OpenFire.parentObjects;
+      po.queue.push(new QueueEntry('update', this.path, obj));
+      return po.queue.flush();
+    };
+
     OpenFire.prototype.set = function(obj) {
       var po;
       po = OpenFire.parentObjects;
