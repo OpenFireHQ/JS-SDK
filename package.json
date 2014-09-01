@@ -1,0 +1,46 @@
+{
+  "name": "openfirejs",
+  "version": "0.0.0",
+  "description": "JS SDK for OpenFire Realtime DB",
+  "homepage": "https://github.com/peterwilli/openfirejs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/peterwilli/openfirejs.git"
+  },
+  "scripts": {
+    "test": "grunt test",
+    "prepublish": "grunt build"
+  },
+  "config": {
+    "blanket": {
+      "loader": "./node-loaders/coffee-script",
+      "data-cover-only": [
+        "src"
+      ],
+      "data-cover-never": "node_modules"
+    }
+  },
+  "main": "./dist/openfirejs",
+  "author": {
+    "name": "Peter Willemsen",
+    "email": "peter@codebuffet.co",
+    "url": "https://github.com/peterwilli"
+  },
+  "license": "GPLv2",
+  "devDependencies": {
+    "blanket": "^1.1.5",
+    "coffee-script": "~1.7.1",
+    "grunt": "~0.4.4",
+    "grunt-bump": "0.0.13",
+    "grunt-coffeelint": "0.0.10",
+    "grunt-contrib-clean": "^0.5.0",
+    "grunt-contrib-coffee": "^0.10.1",
+    "grunt-contrib-uglify": "^0.5.1",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-http-server": "0.0.5",
+    "grunt-mocha-cov": "^0.2.1",
+    "load-grunt-tasks": "^0.4.0",
+    "should": "^3.2.0-beta1"
+  },
+  "dependencies": {}
+}
