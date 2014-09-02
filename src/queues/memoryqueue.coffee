@@ -12,7 +12,7 @@ class MemoryQueue extends OpenFire.BaseQueue
       @parent._set(entry, =>
         @queue.splice(0, 1)
         if @queue.length > 0
-          setTimeout(=>
+          setTimeout(->
             _flush()
           , 10)
         else
