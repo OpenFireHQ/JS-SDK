@@ -12,7 +12,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'test',    [ 'mochacov:spec', 'lint' ]
   grunt.registerTask 'cov',     [ 'mochacov:cov' ]
   grunt.registerTask 'default', [ 'test' ]
-  grunt.registerTask 'server',  [ 'http-server:dev' ]
+  grunt.registerTask 'server',  [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
   grunt.registerTask 'build',   [ 'test', 'clean', 'coffee:dist', 'uglify:dist' ]
 
   ###
