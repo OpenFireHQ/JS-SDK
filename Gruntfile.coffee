@@ -12,6 +12,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'test',    [ 'mochacov:spec', 'lint' ]
   grunt.registerTask 'cov',     [ 'mochacov:cov' ]
   grunt.registerTask 'default', [ 'test' ]
+  grunt.registerTask 'server',  [ 'http-server:dev' ]
   grunt.registerTask 'build',   [ 'test', 'clean', 'coffee:dist', 'uglify:dist' ]
 
   ###
@@ -59,7 +60,7 @@ module.exports = (grunt) ->
             autoIndex: true,
             defaultExt: "html",
 
-            runInBackground:false
+            runInBackground:yes
 
         }
 
@@ -69,7 +70,7 @@ module.exports = (grunt) ->
     watch:
       lib:
         files : [ '**/*.coffee' ]
-        tasks : [ 'test', 'clean', 'coffee:dist', 'uglify:dist' ]
+        tasks : [ 'test', 'clean', 'coffee:dist', 'uglify:dev' ]
         options : nospawn : true
 
     # Clear the contents of a directory
@@ -90,11 +91,18 @@ module.exports = (grunt) ->
           'dist/coffee_concat.js' : 'src/**/*.coffee'
 
     uglify: {
-      dist: {
+      dev: {
         options: {
           compress: off
           beautify: on
           mangle: off
+        },
+        files: {
+          'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
+        }
+      }
+      dist: {
+        options: {
         },
         files: {
           'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
