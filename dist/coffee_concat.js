@@ -39,42 +39,42 @@
     };
 
     uniqueID = function() {
-      return randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_");
+      var timestampBase64;
+      timestampBase64 = OpenFire.Base64.fromNumber(Math.round(new Date().getTime() / 1000) - 1409682796);
+      return timestampBase64 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_");
     };
 
     OpenFire.possibleQueues = [];
 
-    OpenFire.parentObjects = null;
+    OpenFire.parentObjects = {};
 
     OpenFire.prototype.child = function(path) {
       path = this.path + "/" + path;
       log("child path: ", path);
-      return new OpenFire(OpenFire.parentObjects.base + path);
+      return new OpenFire(this.baseUrl + path);
     };
 
     OpenFire.prototype.push = function() {
       var child, po;
-      po = OpenFire.parentObjects;
+      po = OpenFire.parentObjects[this.baseUrl];
       child = this.child("" + (uniqueID()));
       return child;
     };
 
     OpenFire.prototype.update = function(obj) {
       var po;
-      po = OpenFire.parentObjects;
-      po.queue.push(new QueueEntry('update', this.path, obj));
-      return po.queue.flush();
+      po = OpenFire.parentObjects[this.baseUrl];
+      return po.queue.push(new QueueEntry('update', this.path, obj));
     };
 
     OpenFire.prototype.set = function(obj) {
       var po;
-      po = OpenFire.parentObjects;
-      po.queue.push(new QueueEntry('set', this.path, obj));
-      return po.queue.flush();
+      po = OpenFire.parentObjects[this.baseUrl];
+      return po.queue.push(new QueueEntry('set', this.path, obj));
     };
 
     OpenFire.prototype._set = function(obj, cb) {
-      OpenFire.parentObjects.realtimeEngine.write({
+      OpenFire.parentObjects[this.baseUrl].realtimeEngine.write({
         type: obj.type,
         obj: obj.obj,
         path: obj.path
@@ -87,18 +87,24 @@
       this.url = url;
       parts = this.url.split("/");
       this.path = "/" + parts.slice(3, parts.length).join("/");
+      this.baseUrl = parts.slice(0, 3).join("/");
+      log("Starting OpenFire Connection...");
       log("Path: ", this.path);
-      po = OpenFire.parentObjects;
-      if (po === null) {
+      po = OpenFire.parentObjects[this.baseUrl];
+      if (po == null) {
         po = {};
         po.queue = new OpenFire.possibleQueues[0](this);
-        po.base = parts.slice(0, 3).join("/");
-        log("base url: " + po.base);
-        po.realtimeEngine = OFRealtimeEngine.connect(po.base, {});
+        po.queue.intFlush = setInterval(function() {
+          if (!po.queue.flushing) {
+            return po.queue.flush();
+          }
+        }, 500);
+        log("base url: " + this.baseUrl);
+        po.realtimeEngine = OFRealtimeEngine.connect(this.baseUrl, {});
         po.realtimeEngine.on("connection", function(con) {
           return log("Connected to realtime server");
         });
-        OpenFire.parentObjects = po;
+        OpenFire.parentObjects[this.baseUrl] = po;
       }
     }
 
@@ -109,6 +115,8 @@
   window.OpenFire = OpenFire;
 
   BaseQueue = (function() {
+    BaseQueue.prototype.flushing = false;
+
     function BaseQueue(parent) {
       this.parent = parent;
     }
@@ -137,13 +145,27 @@
     };
 
     MemoryQueue.prototype.flush = function() {
-      var entry, _i, _len, _ref;
-      _ref = this.queue;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        entry = _ref[_i];
-        this.parent._set(entry, function() {});
+      var _flush;
+      _flush = (function(_this) {
+        return function() {
+          var entry;
+          entry = _this.queue[0];
+          return _this.parent._set(entry, function() {
+            _this.queue.splice(0, 1);
+            if (_this.queue.length > 0) {
+              return setTimeout(function() {
+                return _flush();
+              }, 10);
+            } else {
+              return _this.flushing = false;
+            }
+          });
+        };
+      })(this);
+      if (this.queue.length > 0) {
+        this.flushing = true;
+        return _flush();
       }
-      return this.queue.length = [];
     };
 
     return MemoryQueue;

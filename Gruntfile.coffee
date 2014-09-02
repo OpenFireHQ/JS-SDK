@@ -65,7 +65,6 @@ module.exports = (grunt) ->
 
     }
 
-
     # Watch for file changes.
     watch:
       lib:
@@ -98,7 +97,7 @@ module.exports = (grunt) ->
           mangle: off
         },
         files: {
-          'dist/openfire.js': ['src/**/*.js', 'dist/coffee_concat.js']
+          'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
         }
       }
     }

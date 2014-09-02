@@ -1,5 +1,6 @@
 class BaseQueue
-
+  
+  flushing: no
   constructor: (@parent) ->
 
   push: ->

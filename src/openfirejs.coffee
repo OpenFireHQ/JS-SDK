@@ -21,39 +21,38 @@ class OpenFire
     result
 
   uniqueID = ->
-    return randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_")
+    timestampBase64 = OpenFire.Base64.fromNumber(Math.round(new Date().getTime() / 1000) - 1409682796)
+    return timestampBase64 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_")
 
   @possibleQueues = []
-  @parentObjects = null
+  @parentObjects = {}
 
   child: (path) ->
     # Child path parameter wont have a starting slash
     path = @path + "/" + path
     log "child path: ", path
 
-    return new OpenFire(OpenFire.parentObjects.base + path)
+    return new OpenFire(@baseUrl + path)
 
   push: ->
-    po = OpenFire.parentObjects
+    po = OpenFire.parentObjects[@baseUrl]
     child = @child("#{uniqueID()}")
 
     return child
 
   update: (obj) ->
-    po = OpenFire.parentObjects
+    po = OpenFire.parentObjects[@baseUrl]
 
     po.queue.push(new QueueEntry('update', @path, obj))
-    po.queue.flush()
 
   set: (obj) ->
     # The server will figure out what to do with the path
-    po = OpenFire.parentObjects
+    po = OpenFire.parentObjects[@baseUrl]
 
     po.queue.push(new QueueEntry('set', @path, obj))
-    po.queue.flush()
 
   _set: (obj, cb) ->
-    OpenFire.parentObjects.realtimeEngine.write({
+    OpenFire.parentObjects[@baseUrl].realtimeEngine.write({
       type: obj.type
       obj: obj.obj
       path: obj.path
@@ -64,21 +63,27 @@ class OpenFire
   constructor: (@url) ->
     parts = @url.split("/")
     @path = "/" + parts.slice(3, parts.length).join("/")
+    @baseUrl = parts.slice(0, 3).join("/")
+
+    log "Starting OpenFire Connection..."
     log "Path: ", @path
 
     # We reuse our socket and memory for different paths
-    po = OpenFire.parentObjects
-    if po == null
+    po = OpenFire.parentObjects[@baseUrl]
+    if !po?
 
       po = {}
 
       # For now, a basic in-memory queue
       po.queue = new OpenFire.possibleQueues[0](@)
-      po.base = parts.slice(0, 3).join("/")
+      po.queue.intFlush = setInterval(->
+        if not po.queue.flushing
+          po.queue.flush()
+      , 500)
 
-      log "base url: #{po.base}"
+      log "base url: #{@baseUrl}"
 
-      po.realtimeEngine = OFRealtimeEngine.connect(po.base, {
+      po.realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
 
       })
 
@@ -86,6 +91,6 @@ class OpenFire
         log "Connected to realtime server"
       )
 
-      OpenFire.parentObjects = po
+      OpenFire.parentObjects[@baseUrl] = po
 
 window.OpenFire = OpenFire

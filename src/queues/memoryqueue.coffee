@@ -7,11 +7,20 @@ class MemoryQueue extends OpenFire.BaseQueue
 
   flush: ->
 
-    for entry in @queue
-      @parent._set(entry, ->
-        
+    _flush = =>
+      entry = @queue[0]
+      @parent._set(entry, =>
+        @queue.splice(0, 1)
+        if @queue.length > 0
+          setTimeout(=>
+            _flush()
+          , 10)
+        else
+          @flushing = no
       )
 
-    @queue.length = []
+    if @queue.length > 0
+      @flushing = yes
+      _flush()
 
 OpenFire.possibleQueues.push MemoryQueue
