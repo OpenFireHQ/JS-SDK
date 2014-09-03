@@ -4,6 +4,11 @@ class QueueEntry
 
 
 class OpenFire
+
+  # Static vars
+  @possibleQueues = []
+  @parentObjects = {}
+
   log = (msg) ->
     arguments_ = ['OpenFire [SDK] -> ']
     for arg in arguments
@@ -24,15 +29,19 @@ class OpenFire
     timestampBase64 = OpenFire.Base64.fromNumber(Math.round(new Date().getTime() / 1000) - 1409682796)
     return timestampBase64 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_")
 
-  @possibleQueues = []
-  @parentObjects = {}
-
   child: (path) ->
     # Child path parameter wont have a starting slash
     path = @path + "/" + path
     log "child path: ", path
 
     return new OpenFire(@baseUrl + path)
+
+  name: ->
+
+    parts = @path.split("/")
+    lastPath = parts.slice(parts.length - 1, parts.length).join("/")
+
+    return lastPath
 
   push: ->
     po = OpenFire.parentObjects[@baseUrl]
