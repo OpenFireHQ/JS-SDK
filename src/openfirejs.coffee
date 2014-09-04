@@ -2,8 +2,17 @@ class QueueEntry
 
   constructor: (@type, @path, @obj) ->
 
+class Snapshot
+
+  constructor: (@obj) ->
+
+  val: ->
+    return @obj
 
 class OpenFire
+
+  # Hidden vars
+  po = null
 
   # Static vars
   @possibleQueues = []
@@ -37,32 +46,39 @@ class OpenFire
     return new OpenFire(@baseUrl + path)
 
   name: ->
-
     parts = @path.split("/")
     lastPath = parts.slice(parts.length - 1, parts.length).join("/")
 
     return lastPath
 
+  on: (type, callback) ->
+    attrs =
+      action: 'sub'
+      type: type
+      path: @path
+
+    events = @po.events["#{type}:#{@path}"] or []
+    events.push(callback)
+    @po.events["#{type}:#{@path}"] = events
+
+    @po.realtimeEngine.write(attrs)
+    log "Subscribing with attrs: ", attrs
+
   push: ->
-    po = OpenFire.parentObjects[@baseUrl]
     child = @child("#{uniqueID()}")
 
     return child
 
   update: (obj) ->
-    po = OpenFire.parentObjects[@baseUrl]
-
-    po.queue.push(new QueueEntry('update', @path, obj))
+    @po.queue.push(new QueueEntry('update', @path, obj))
 
   set: (obj) ->
     # The server will figure out what to do with the path
-    po = OpenFire.parentObjects[@baseUrl]
-
-    po.queue.push(new QueueEntry('set', @path, obj))
+    @po.queue.push(new QueueEntry('set', @path, obj))
 
   _set: (obj, cb) ->
-    OpenFire.parentObjects[@baseUrl].realtimeEngine.write({
-      type: obj.type
+    @po.realtimeEngine.write({
+      action: obj.type
       obj: obj.obj
       path: obj.path
     })
@@ -92,14 +108,28 @@ class OpenFire
 
       log "base url: #{@baseUrl}"
 
-      po.realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
+      po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
 
       })
 
-      po.realtimeEngine.on("connection", (con) ->
+      realtimeEngine.on("open", =>
         log "Connected to realtime server"
+        realtimeEngine.on('data', (data) =>
+          log "Got data ", data
+          { action } = data
+
+          if action is 'data'
+            { path, type, obj } = data
+            events = @po.events["#{type}:#{path}"]
+            if events?
+              for event in events
+                event(new Snapshot(obj))
+        )
       )
 
       OpenFire.parentObjects[@baseUrl] = po
+
+    @po = po
+    @po.events = {}
 
 window.OpenFire = OpenFire

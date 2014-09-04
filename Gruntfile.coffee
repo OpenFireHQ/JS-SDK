@@ -9,7 +9,7 @@ module.exports = (grunt) ->
   # tasks
   ###
   grunt.registerTask 'lint',    [ 'coffeelint' ]
-  grunt.registerTask 'test',    [ 'mochacov:spec', 'lint' ]
+  grunt.registerTask 'test',    [ 'jasmine:spec', 'lint' ]
   grunt.registerTask 'cov',     [ 'mochacov:cov' ]
   grunt.registerTask 'default', [ 'test' ]
   grunt.registerTask 'server',  [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
@@ -19,6 +19,16 @@ module.exports = (grunt) ->
   # config
   ###
   grunt.initConfig
+
+    jasmine: {
+      spec: {
+        src: 'dist/openfire.js',
+        options: {
+          specs: 'spec/*Spec.js',
+          helpers: 'spec/*Helper.js'
+        }
+      }
+    }
 
     # Tests and coverage tests
     # When running cov you will need to pipe your output
