@@ -9,7 +9,7 @@ module.exports = (grunt) ->
   # tasks
   ###
   grunt.registerTask 'lint',    [ 'coffeelint' ]
-  grunt.registerTask 'test',    [ 'jasmine:spec', 'lint' ]
+  grunt.registerTask 'test',    [ 'coffee:specDist', 'jasmine:spec', 'lint' ]
   grunt.registerTask 'cov',     [ 'mochacov:cov' ]
   grunt.registerTask 'default', [ 'test' ]
   grunt.registerTask 'server',  [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
@@ -24,7 +24,7 @@ module.exports = (grunt) ->
       spec: {
         src: 'dist/openfire.js',
         options: {
-          specs: 'spec/*Spec.js',
+          specs: 'dist/spec.js',
           helpers: 'spec/*Helper.js'
         }
       }
@@ -96,6 +96,11 @@ module.exports = (grunt) ->
     # Deal with coffeescript concatenation and compiling
     coffee:
       options: join: true
+
+      specDist:
+        files:
+          'dist/spec.js' : 'spec/*.coffee'
+
       dist:
         files:
           'dist/coffee_concat.js' : 'src/**/*.coffee'
