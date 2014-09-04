@@ -1,6 +1,6 @@
 class QueueEntry
 
-  constructor: (@type, @path, @obj) ->
+  constructor: (@action, @path, @obj) ->
 
 class Snapshot
 
@@ -62,7 +62,7 @@ class OpenFire
     @po.events["#{type}:#{@path}"] = events
 
     @po.realtimeEngine.write(attrs)
-    log "Subscribing with attrs: ", attrs
+    log "Created event for #{type}:#{@path}"
 
   push: ->
     child = @child("#{uniqueID()}")
@@ -77,13 +77,28 @@ class OpenFire
     @po.queue.push(new QueueEntry('set', @path, obj))
 
   _set: (obj, cb) ->
-    @po.realtimeEngine.write({
-      action: obj.type
-      obj: obj.obj
-      path: obj.path
-    })
+    { action, obj, path } = obj
+
+    @po.realtimeEngine.write(
+      action: action
+      obj: obj
+      path: path
+    )
+
+    if action is 'set'
+      # Just emit a local event to ourselves
+      # No changes could have been made to the server because we are setting a new object
+      # The server will take care of other clients (it wont send a notification to us)
+      @emitLocalEvent('value', path, obj)
 
     cb(null)
+
+  emitLocalEvent: (type, path, obj) ->
+    events = @po.events["#{type}:#{path}"]
+    if events?
+      snapshot = new Snapshot(obj)
+      for event in events
+        event(snapshot)
 
   constructor: (@url) ->
     parts = @url.split("/")
@@ -120,10 +135,7 @@ class OpenFire
 
           if action is 'data'
             { path, type, obj } = data
-            events = @po.events["#{type}:#{path}"]
-            if events?
-              for event in events
-                event(new Snapshot(obj))
+            @emitLocalEvent(type, path, obj)
         )
       )
 
