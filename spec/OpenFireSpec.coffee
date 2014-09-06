@@ -41,3 +41,13 @@ describe "Callback test", ->
     )
 
     users.set({ lol: { username: "KuroiRoy" }})
+
+  it "Should callback when replacing the users list with a child that is a primitive type", (cb) ->
+    users = db.child("users")
+    users.on("child_added", (user) ->
+      val = user.val()
+      console.log "User: ", val
+      cb()
+    )
+
+    users.set({ lol: 3})

@@ -74,10 +74,34 @@ class OpenFire
 
   set: (obj) ->
     # The server will figure out what to do with the path
-    @po.queue.push(new QueueEntry('set', @path, obj))
+    ###
+        The client will handle distinction of primitive types (int, string..)
+        And turns sets with primitive types into something like this:
+
+        db.child("users").child("lol").set("test")
+        {
+          action: 'update'
+          path: '/db/users'
+          obj: { 'lol': 'test' }
+        }
+
+        It removes a ton of logic at the serverside which is better for perfomance ;)
+    ###
+
+    if typeof obj is 'object'
+      @po.queue.push(new QueueEntry('set', @path, obj))
+    else
+      parts = @path.split("/")
+      previous = parts.slice(0, parts.length -  1).join("/")
+      lastPath = parts.slice(parts.length -  1, parts.length).join("/")
+
+      _obj = {}
+      _obj[lastPath] = obj
+
+      @po.queue.push(new QueueEntry('update', previous, _obj))
 
   _set: (obj, cb) ->
-    { action, obj, path } = obj
+    { action, obj, path } = ob
 
     @po.realtimeEngine.write(
       action: action
