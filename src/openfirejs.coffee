@@ -100,22 +100,24 @@ class OpenFire
       for event in events
         event(snapshot)
 
+    return
+
   constructor: (@url) ->
     parts = @url.split("/")
     @path = "/" + parts.slice(3, parts.length).join("/")
     @baseUrl = parts.slice(0, 3).join("/")
 
-    log "Starting OpenFire Connection..."
     log "Path: ", @path
 
-    # We reuse our socket and memory for different paths
+    # We reuse our connection and memory for different paths
     po = OpenFire.parentObjects[@baseUrl]
     if !po?
-
+      log "Starting OpenFire Connection..."
       po = {}
 
       # For now, a basic in-memory queue
       po.queue = new OpenFire.possibleQueues[0](@)
+      po.events = {}
       po.queue.intFlush = setInterval(->
         if not po.queue.flushing
           po.queue.flush()
@@ -142,6 +144,5 @@ class OpenFire
       OpenFire.parentObjects[@baseUrl] = po
 
     @po = po
-    @po.events = {}
 
 window.OpenFire = OpenFire

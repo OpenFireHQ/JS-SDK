@@ -80,7 +80,7 @@ module.exports = (grunt) ->
     watch:
       lib:
         files : [ '**/*.coffee' ]
-        tasks : [ 'test', 'clean', 'coffee:dist', 'uglify:dev' ]
+        tasks : [ 'clean', 'coffee:dist', 'uglify:dev' ]
         options : nospawn : true
 
     # Clear the contents of a directory

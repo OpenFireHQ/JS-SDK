@@ -21,5 +21,13 @@ describe "Callback test", ->
         console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
       else
         expect(snapshot.val()).toEqual(simpleObject)
-        cb()        
+        cb()
     )
+
+  it "Should callback when adding a child", (cb) ->
+    users = db.child("users")
+    users.on("child_added", (user) ->
+      cb()
+    )
+
+    users.push().set(username: "PeterPower!")    
