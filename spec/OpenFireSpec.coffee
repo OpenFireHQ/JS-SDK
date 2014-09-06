@@ -27,7 +27,17 @@ describe "Callback test", ->
   it "Should callback when adding a child", (cb) ->
     users = db.child("users")
     users.on("child_added", (user) ->
+      console.log "User: ", JSON.stringify(user.val())
       cb()
     )
 
-    users.push().set(username: "PeterPower!")    
+    users.push().set(username: "PeterPower!")
+
+  it "Should callback when replacing the users list with a child of a different name", (cb) ->
+    users = db.child("users")
+    users.on("child_added", (user) ->
+      console.log "User: ", JSON.stringify(user.val())
+      cb()
+    )
+
+    users.set({ lol: { username: "KuroiRoy" }})
