@@ -101,7 +101,7 @@ class OpenFire
       @po.queue.push(new QueueEntry('update', previous, _obj))
 
   _set: (obj, cb) ->
-    { action, obj, path } = ob
+    { action, obj, path } = obj
 
     @po.realtimeEngine.write(
       action: action
