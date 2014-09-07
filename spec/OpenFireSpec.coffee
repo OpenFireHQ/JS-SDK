@@ -15,28 +15,38 @@ describe "Creation simple object", ->
 
 describe "Callback test", ->
   it "Should give me back the contents of the simple object we created", (cb) ->
-    db.on("value", (snapshot) ->
+    callback = (snapshot) ->
       value = snapshot.val()
       if value is null
         console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
       else
         expect(snapshot.val()).toEqual(simpleObject)
+        db.off('value', callback)
         cb()
-    )
+
+    db.on("value", callback)
 
   it "Should callback when adding a child", (cb) ->
     users = db.child("users")
-    users.on("child_added", (user) ->
-      console.log "User: ", JSON.stringify(user.val())
+    users.once("child_added", (user) ->
+      console.log "User 1: ", JSON.stringify(user.val())
       cb()
     )
+    ###
+          { action: 'set',
+      obj: { lol: { username: 'KuroiRoy' } },
+      path: '/test/users' }
 
+    { action: 'set', obj: { lol: 3 }, path: '/test/users' }
+
+
+    ###
     users.push().set(username: "PeterPower!")
 
   it "Should callback when replacing the users list with a child of a different name", (cb) ->
     users = db.child("users")
-    users.on("child_added", (user) ->
-      console.log "User: ", JSON.stringify(user.val())
+    users.once("child_added", (user) ->
+      console.log "User 2: ", JSON.stringify(user.val())
       cb()
     )
 
@@ -44,9 +54,9 @@ describe "Callback test", ->
 
   it "Should callback when replacing the users list with a child that is a primitive type", (cb) ->
     users = db.child("users")
-    users.on("child_added", (user) ->
+    users.once("child_changed", (user) ->
       val = user.val()
-      console.log "User: ", val
+      console.log "User 3: ", val
       cb()
     )
 

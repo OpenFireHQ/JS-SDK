@@ -14,6 +14,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'default', [ 'test' ]
   grunt.registerTask 'server',  [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
   grunt.registerTask 'build',   [ 'clean', 'coffee:dist', 'uglify:dist', 'test' ]
+  grunt.registerTask 'build-dev',   [ 'clean', 'coffee:dist', 'uglify:dev', 'test' ]
 
   ###
   # config

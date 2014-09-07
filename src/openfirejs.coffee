@@ -35,8 +35,8 @@ class OpenFire
     result
 
   uniqueID = ->
-    timestampBase64 = OpenFire.Base64.fromNumber(Math.round(new Date().getTime() / 1000) - 1409682796)
-    return timestampBase64 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_")
+    timestampBase36 = (Math.round(new Date().getTime() / 1000) - 1409682796).toString 36
+    return timestampBase36 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_")
 
   child: (path) ->
     # Child path parameter wont have a starting slash
@@ -50,6 +50,26 @@ class OpenFire
     lastPath = parts.slice(parts.length - 1, parts.length).join("/")
 
     return lastPath
+
+  once: (type, callback) ->
+    cb = (snapshot) =>
+      @off(type, cb)
+      callback snapshot
+
+    @on(type, cb)
+
+  off: (type, callback) ->
+    events = @po.events["#{type}:#{@path}"]
+    if events?
+      i = 0
+      for event in events
+        if event is callback
+          events.splice(i, 1)
+          break
+
+        i++
+
+    return null
 
   on: (type, callback) ->
     attrs =
@@ -119,7 +139,7 @@ class OpenFire
 
   emitLocalEvent: (type, path, obj) ->
     events = @po.events["#{type}:#{path}"]
-    if events?
+    if events
       snapshot = new Snapshot(obj)
       for event in events
         event(snapshot)
@@ -156,7 +176,7 @@ class OpenFire
       realtimeEngine.on("open", =>
         log "Connected to realtime server"
         realtimeEngine.on('data', (data) =>
-          log "Got data ", data
+          log "Got data ", JSON.stringify(data)
           { action } = data
 
           if action is 'data'
