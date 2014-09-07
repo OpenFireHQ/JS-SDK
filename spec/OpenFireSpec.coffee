@@ -20,9 +20,9 @@ describe "Callback test", ->
       if value is null
         console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
       else
-        expect(snapshot.val()).toEqual(simpleObject)
-        db.off('value', callback)
-        cb()
+        if value.lol is true
+          db.off('value', callback)
+          cb()
 
     db.on("value", callback)
 
@@ -32,15 +32,6 @@ describe "Callback test", ->
       console.log "User 1: ", JSON.stringify(user.val())
       cb()
     )
-    ###
-          { action: 'set',
-      obj: { lol: { username: 'KuroiRoy' } },
-      path: '/test/users' }
-
-    { action: 'set', obj: { lol: 3 }, path: '/test/users' }
-
-
-    ###
     users.push().set(username: "PeterPower!")
 
   it "Should callback when replacing the users list with a child of a different name", (cb) ->
@@ -61,3 +52,11 @@ describe "Callback test", ->
     )
 
     users.set({ lol: 3})
+
+  it "Should callback with child_removed when I try to delete something", (cb) ->
+    users = db.child("users")
+    users.once("child_removed", (oldUser) ->
+      expect(oldUser.val()).toBe(3)
+      cb()
+    )
+    users.set(lol: null)
