@@ -43,11 +43,20 @@ describe "Callback test", ->
 
     users.set({ lol: { username: "KuroiRoy" }})
 
+  it "Should callback when setting user using alternative syntax", (cb) ->
+    users = db.child("users")
+    users.once("child_added", (user) ->
+      console.log "User 3: ", JSON.stringify(user.val())
+      cb()
+    )
+
+    users.child("megusta").child("username").set("Mr None Of your Bussines")
+
   it "Should callback when replacing the users list with a child that is a primitive type", (cb) ->
     users = db.child("users")
     users.once("child_changed", (user) ->
       val = user.val()
-      console.log "User 3: ", val
+      console.log "User 4: ", val
       cb()
     )
 
