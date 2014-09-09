@@ -1,0 +1,270 @@
+<html>
+<head>
+  <title>Firebase Collaborative Drawing Example</title>
+  <script type="text/javascript" src="/dist/openfire.js"></script>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <style>
+    #clear {
+      float:center;
+      -webkit-border-radius: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #f0f0f0;
+      display: inline-block;
+      font-size: 13px;
+      margin-top: 5px;
+      padding: 5px;
+      -webkit-box-shadow: 0 1px 0 #686868 inset;
+      box-shadow: 0 1px 0 #686868 inset;
+      background: #555555;
+      background: -moz-linear-gradient(top, #555555 0%, #525252 4%, #494949 100%);
+      background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#555555), color-stop(4%,#525252), color-stop(100%,#494949));
+      background: -webkit-linear-gradient(top, #555555 0%,#525252 4%,#494949 100%);
+      background: -o-linear-gradient(top, #555555 0%,#525252 4%,#494949 100%);
+      background: -ms-linear-gradient(top, #555555 0%,#525252 4%,#494949 100%);
+      background: linear-gradient(to bottom, #555555 0%,#525252 4%,#494949 100%);
+    }
+    #clear:hover {
+      background: #515151;
+    }
+    body {
+      margin-top: 10px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 500px;
+      background-color: #f8f8f8;
+      font-size: 24px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #424547;
+      text-align: center;
+      background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAC/CAIAAACwtyHbAAAAJ0lEQVQoz2P49PEjEwMDwygexYMW////H1MMm1ps6v79Q+H/Q6gFAJ+HEEI0f+QEAAAAAElFTkSuQmCC) repeat-x scroll left top rgb(229, 228, 228);
+    }
+
+    h1 {
+      font-size: 36px;
+      font-weight: bold;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #424547;
+    }
+
+    h3 {
+      font-size: 24px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #424547;
+    }
+
+    p {
+     font-size: 16px;
+    }
+
+    input {
+      font-size: 24px;
+    }
+
+    input[type=text] {
+      color: #424547;
+      border: 1px solid #c2c2c2;
+      background-color: white;
+    }
+
+    em {
+      font-style: normal;
+      font-weight: bold;
+      color: black;
+    }
+
+    /* Chat */
+    #messagesDiv {
+      background-color: white;
+      overflow: auto;
+      height: 230px;
+      width: 100%;
+      padding: 10px;
+      border: 8px solid #424547;
+      margin-bottom: 5px;
+      text-align: left;
+    }
+
+    #nameInput {
+      width: 26%;
+    }
+
+    #messageInput {
+      width: 68%;
+    }
+
+    /* Drawing */
+
+    #colorholder {
+      width: 480px;
+      height: 30px;
+      border: 2px solid #424547;
+      margin-top: 5px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    #drawing-canvas {
+      border: 3px solid #999
+    }
+
+    .colorbox {
+      width: 22px;
+      height: 22px;
+      margin: 1px;
+      display: inline-block;
+      border: 3px solid black;
+    }
+
+    /* Leaderboard */
+
+    #leaderboardTable {
+      background-color: white;
+      overflow: auto;
+      width: 100%;
+      padding: 10px;
+      border: 8px solid #424547;
+      margin-bottom: 5px;
+    }
+
+    #scoreInput {
+      width: 68%;
+    }
+
+    #highestscore {
+      margin-top: 20px;
+      font-size: 14px;
+    }
+
+    /* Presence */
+
+    #presenceDiv {
+      text-align: center;
+    }
+
+    /* Tetris */
+
+    .tetris-body {
+        width: 600px;
+    }
+
+    #canvas0, #canvas1 {
+      display: inline-block;
+      border: 4px solid #424547;
+    }
+
+    #restartButton {
+        margin-top: 5px;
+    }
+
+    #gameInProgress {
+      font-size: 14px;
+    }
+
+    .hide {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div style="width:200px; position:absolute; top:0px; left:0px;">
+    <div style="width:200px; position:absolute; top:0px; left:0px; text-align: center; pointer-events: none;">
+      <p>Draw Here!</p>
+    </div>
+    <canvas style="border: 1px solid #999" id="drawing-canvas" width="200" height="150"></canvas>
+    <a id="clear">Clear Canvas</a>
+  </div>
+  <script>
+    function generateRandom() {
+      var chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+      var retVal = chars.charAt(Math.floor(Math.random() * 26, 1));
+      for (var i = 0; i < 10; i++) {
+        retVal = retVal + chars.charAt(Math.floor(Math.random() * chars.length, 1));
+      }
+      return retVal;
+    }
+
+    function getFirebase() {
+      return new OpenFire("http://127.0.0.1:5454/drawing/pixels");
+    }
+
+    $(document).ready(function () {
+      // Set up some globals
+      var pixSize = 4, lastPoint = null, currentColor = "fc5", mouseDown = 0;
+
+      // Create a reference to the pixel data for our drawing.
+      var pixelDataRef = getFirebase();
+
+      // Add clear handler
+      $('#clear').click(function() {
+        $('#drawing-canvas').get(0).getContext('2d').clearRect(0, 0, 100, 150);
+        pixelDataRef.set(null);
+      });
+
+      // Set up our canvas
+      var myCanvas = document.getElementById('drawing-canvas');
+      var myContext = myCanvas.getContext ? myCanvas.getContext('2d') : null;
+      if (myContext == null) {
+        alert("You must use a browser that supports HTML5 Canvas to run this demo.");
+        return;
+      }
+
+      // Keep track of if the mouse is up or down.
+      myCanvas.onmousedown = function () { mouseDown = 1; return false; };
+      myCanvas.onmouseout = myCanvas.onmouseup = function () {
+        mouseDown = 0, lastPoint = null;
+      };
+
+      // Disable text selection.
+      myCanvas.onselectstart = function() { return false; };
+
+      // Draw a line from the mouse's last position to its current position.
+      var drawLineOnMouseMove = function(e) {
+        if (!mouseDown) return;
+
+        // Bresenham's line algorithm. We use this to ensure smooth lines are drawn.
+        var offset = $('canvas').offset();
+        var x1 = Math.floor((e.pageX - offset.left) / pixSize - 1),
+          y1 = Math.floor((e.pageY - offset.top) / pixSize - 1);
+        var x0 = (lastPoint == null) ? x1 : lastPoint[0];
+        var y0 = (lastPoint == null) ? y1 : lastPoint[1];
+        var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+        var sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1, err = dx - dy;
+        while (true) {
+          // Write the pixel into Firebase, or if we are drawing white, remove the pixel.
+          pixelDataRef.child(x0 + ":" + y0).set(currentColor === "fff" ? null : currentColor);
+
+          if (x0 == x1 && y0 == y1) break;
+          var e2 = 2 * err;
+          if (e2 > -dy) {
+            err = err - dy;
+            x0 = x0 + sx;
+          }
+          if (e2 < dx) {
+            err = err + dx;
+            y0 = y0 + sy;
+          }
+        }
+        lastPoint = [x1, y1];
+      }
+      $(myCanvas).mousemove(drawLineOnMouseMove);
+      $(myCanvas).mousedown(drawLineOnMouseMove);
+
+      // Add callbacks that are fired any time the pixel data changes and adjusts the canvas appropriately.
+      // Note that child_added events will be fired for initial pixel data as well.
+      var drawPixel = function(snapshot) {
+        var coords = snapshot.name.split(":");
+        myContext.fillStyle = "#" + snapshot.val;
+        myContext.fillRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
+      }
+      var clearPixel = function(snapshot) {
+        var coords = snapshot.name.split(":");
+        myContext.clearRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
+      }
+      pixelDataRef.on('child_added', drawPixel);
+      pixelDataRef.on('child_changed', drawPixel);
+      pixelDataRef.on('child_removed', clearPixel);
+    });
+  </script>
+</body>
+</html>

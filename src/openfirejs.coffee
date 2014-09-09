@@ -4,10 +4,7 @@ class QueueEntry
 
 class Snapshot
 
-  constructor: (@obj) ->
-
-  val: ->
-    return @obj
+  constructor: (@val, @path, @name) ->
 
 class OpenFire
 
@@ -137,10 +134,10 @@ class OpenFire
 
     cb(null)
 
-  emitLocalEvent: (type, path, obj) ->
+  emitLocalEvent: (type, path, obj, name = null) ->
     events = @po.events["#{type}:#{path}"]
     if events
-      snapshot = new Snapshot(obj)
+      snapshot = new Snapshot(obj, path, name)
       for event in events
         event(snapshot)
 
@@ -180,8 +177,8 @@ class OpenFire
           { action } = data
 
           if action is 'data'
-            { path, type, obj } = data
-            @emitLocalEvent(type, path, obj)
+            { name, path, type, obj } = data
+            @emitLocalEvent(type, path, obj, name)
         )
       )
 
