@@ -233,6 +233,7 @@
         while (true) {
           // Write the pixel into Firebase, or if we are drawing white, remove the pixel.
           pixelDataRef.child(x0 + ":" + y0).set(currentColor === "fff" ? null : currentColor);
+          drawPixel_(currentColor, [x0, y0]);
 
           if (x0 == x1 && y0 == y1) break;
           var e2 = 2 * err;
@@ -254,15 +255,18 @@
       // Note that child_added events will be fired for initial pixel data as well.
       var drawPixel = function(snapshot) {
         var coords = snapshot.name.split(":");
-        myContext.fillStyle = "#" + snapshot.val;
+        drawPixel_(snapshot.val, coords);
+      }
+      var drawPixel_ = function(color, coords) {
+        myContext.fillStyle = "#" + color;
         myContext.fillRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
       }
       var clearPixel = function(snapshot) {
         var coords = snapshot.name.split(":");
         myContext.clearRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
       }
-      pixelDataRef.on('child_added', drawPixel);
-      pixelDataRef.on('child_changed', drawPixel);
+      pixelDataRef.on('remote_child_added', drawPixel);
+      pixelDataRef.on('remote_child_changed', drawPixel);
       pixelDataRef.on('child_removed', clearPixel);
     });
   </script>

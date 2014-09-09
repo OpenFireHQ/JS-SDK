@@ -121,6 +121,8 @@ class OpenFire
       else
         @po.queue.push(new QueueEntry('update', previous, _obj))
 
+      @po.queue.flush()
+
   _set: (obj, cb) ->
     { action, obj, path } = obj
 
@@ -166,7 +168,7 @@ class OpenFire
       po.queue.intFlush = setInterval(->
         if not po.queue.flushing
           po.queue.flush()
-      , 100)
+      , 1000)
 
       DEBUG and log "base url: #{@baseUrl}"
 
