@@ -15,12 +15,13 @@ class OpenFire
   @possibleQueues = []
   @parentObjects = {}
 
-  log = (msg) ->
-    arguments_ = ['OpenFire [SDK] -> ']
-    for arg in arguments
-      arguments_.push arg
+  if DEBUG
+    DEBUG and log = (msg) ->
+      arguments_ = ['OpenFire [SDK] -> ']
+      for arg in arguments
+        arguments_.push arg
 
-    console.log.apply console, arguments_
+      console.log.apply console, arguments_
 
   randomString = (length, chars) ->
     result = ""
@@ -38,7 +39,7 @@ class OpenFire
   child: (path) ->
     # Child path parameter wont have a starting slash
     path = @path + "/" + path
-    log "child path: ", path
+    DEBUG and log "child path: ", path
 
     return new OpenFire(@baseUrl + path)
 
@@ -79,7 +80,7 @@ class OpenFire
     @po.events["#{type}:#{@path}"] = events
 
     @po.realtimeEngine.write(attrs)
-    log "Created event for #{type}:#{@path}"
+    DEBUG and log "Created event for #{type}:#{@path}"
 
   push: ->
     child = @child("#{uniqueID()}")
@@ -105,7 +106,7 @@ class OpenFire
         It removes a ton of logic at the serverside which is better for perfomance ;)
     ###
 
-    if typeof obj is 'object'
+    if obj isnt null and typeof obj is 'object'
       @po.queue.push(new QueueEntry('set', @path, obj))
     else
       parts = @path.split("/")
@@ -114,8 +115,11 @@ class OpenFire
 
       _obj = {}
       _obj[lastPath] = obj
-
-      @po.queue.push(new QueueEntry('update', previous, _obj))
+      if obj is null
+        # If deleting use 'set' anyway
+        @po.queue.push(new QueueEntry('set', previous, _obj))
+      else
+        @po.queue.push(new QueueEntry('update', previous, _obj))
 
   _set: (obj, cb) ->
     { action, obj, path } = obj
@@ -148,12 +152,12 @@ class OpenFire
     @path = "/" + parts.slice(3, parts.length).join("/")
     @baseUrl = parts.slice(0, 3).join("/")
 
-    log "Path: ", @path
+    DEBUG and log "Path: ", @path
 
     # We reuse our connection and memory for different paths
     po = OpenFire.parentObjects[@baseUrl]
     if !po?
-      log "Starting OpenFire Connection..."
+      DEBUG and log "Starting OpenFire Connection..."
       po = {}
 
       # For now, a basic in-memory queue
@@ -162,18 +166,18 @@ class OpenFire
       po.queue.intFlush = setInterval(->
         if not po.queue.flushing
           po.queue.flush()
-      , 500)
+      , 100)
 
-      log "base url: #{@baseUrl}"
+      DEBUG and log "base url: #{@baseUrl}"
 
       po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
 
       })
 
       realtimeEngine.on("open", =>
-        log "Connected to realtime server"
+        DEBUG and log "Connected to realtime server"
         realtimeEngine.on('data', (data) =>
-          log "Got data ", JSON.stringify(data)
+          DEBUG and log "Got data ", JSON.stringify(data)
           { action } = data
 
           if action is 'data'

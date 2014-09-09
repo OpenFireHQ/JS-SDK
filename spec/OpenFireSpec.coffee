@@ -16,7 +16,7 @@ describe "Creation simple object", ->
 describe "Callback test", ->
   it "Should give me back the contents of the simple object we created", (cb) ->
     callback = (snapshot) ->
-      value = snapshot.val()
+      value = snapshot.val
       if value is null
         console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
       else
@@ -29,7 +29,7 @@ describe "Callback test", ->
   it "Should callback when adding a child", (cb) ->
     users = db.child("users")
     users.once("child_added", (user) ->
-      console.log "User 1: ", JSON.stringify(user.val())
+      console.log "User 1: ", JSON.stringify(user.val)
       cb()
     )
     users.push().set(username: "PeterPower!")
@@ -37,7 +37,7 @@ describe "Callback test", ->
   it "Should callback when replacing the users list with a child of a different name", (cb) ->
     users = db.child("users")
     users.once("child_added", (user) ->
-      console.log "User 2: ", JSON.stringify(user.val())
+      console.log "User 2: ", JSON.stringify(user.val)
       cb()
     )
 
@@ -46,7 +46,7 @@ describe "Callback test", ->
   it "Should callback when setting user using alternative syntax", (cb) ->
     users = db.child("users")
     users.once("child_added", (user) ->
-      console.log "User 3: ", JSON.stringify(user.val())
+      console.log "User 3: ", JSON.stringify(user.val)
       cb()
     )
 
@@ -55,7 +55,7 @@ describe "Callback test", ->
   it "Should callback when replacing the users list with a child that is a primitive type", (cb) ->
     users = db.child("users")
     users.once("child_changed", (user) ->
-      val = user.val()
+      val = user.val
       console.log "User 4: ", val
       cb()
     )
@@ -65,7 +65,7 @@ describe "Callback test", ->
   it "Should callback with child_removed when I try to delete something", (cb) ->
     users = db.child("users")
     users.once("child_removed", (oldUser) ->
-      expect(oldUser.val()).toBe(3)
+      expect(oldUser.val).toBe(3)
       cb()
     )
     users.set(lol: null)

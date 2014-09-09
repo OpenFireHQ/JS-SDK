@@ -109,7 +109,12 @@ module.exports = (grunt) ->
     uglify: {
       dev: {
         options: {
-          compress: off
+          compress: {
+            global_defs: {
+              "DEBUG": true
+            },
+            dead_code: false
+          }
           beautify: on
           mangle: off
         },
@@ -119,6 +124,13 @@ module.exports = (grunt) ->
       }
       dist: {
         options: {
+          compress: {
+            global_defs: {
+              "DEBUG": false
+            },
+            dead_code: true
+          }
+          mangle: on
         },
         files: {
           'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
