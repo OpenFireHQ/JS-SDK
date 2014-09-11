@@ -79,11 +79,16 @@ class OpenFire
     events.push(callback)
     @po.events["#{type}:#{@path}"] = events
 
+    if type is 'connect'
+      if @connected
+        @emitLocalEvent('connect', @path, null, null)
+      return
+
     @po.realtimeEngine.write(attrs)
     DEBUG and log "Created event for #{type}:#{@path}"
 
   push: ->
-    child = @child("#{uniqueID()}")
+    child = @child(uniqueID())
 
     return child
 
@@ -151,8 +156,11 @@ class OpenFire
 
   constructor: (@url) ->
     parts = @url.split("/")
+    # Instance vars
     @path = "/" + parts.slice(3, parts.length).join("/")
     @baseUrl = parts.slice(0, 3).join("/")
+    @connected = no
+
 
     DEBUG and log "Path: ", @path
 
@@ -178,6 +186,8 @@ class OpenFire
 
       realtimeEngine.on("open", =>
         DEBUG and log "Connected to realtime server"
+        @connected = yes
+        @emitLocalEvent('connect', @path, null, null)
         realtimeEngine.on('data', (data) =>
           DEBUG and log "Got data ", JSON.stringify(data)
           { action } = data

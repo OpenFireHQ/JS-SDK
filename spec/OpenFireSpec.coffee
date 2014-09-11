@@ -7,7 +7,19 @@ describe "Initializing OpenFire", ->
 
   it "Should connect to the server (it will try localhost:5454 using db /test)", ->
     db = new OpenFire("http://127.0.0.1:5454/test")
+
     expect(db).toBeDefined()
+
+describe "Connection callback", ->
+  it "Should callback when I got connected", (cb) ->
+    db.on("connect", ->
+      cb()
+    )
+
+  it "Should callback when I already am connected", (cb) ->
+    db.on("connect", ->
+      cb()
+    )
 
 describe "Creation simple object", ->
   it "Should write a object with contents { lol: true }", ->
