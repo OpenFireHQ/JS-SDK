@@ -265,6 +265,7 @@
         var coords = snapshot.name.split(":");
         myContext.clearRect(parseInt(coords[0]) * pixSize, parseInt(coords[1]) * pixSize, pixSize, pixSize);
       }
+      pixelDataRef.on('remote_child', drawPixel);
       pixelDataRef.on('remote_child_added', drawPixel);
       pixelDataRef.on('remote_child_changed', drawPixel);
       pixelDataRef.on('child_removed', clearPixel);
