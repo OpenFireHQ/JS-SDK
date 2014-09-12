@@ -5,6 +5,9 @@ class QueueEntry
 class Snapshot
 
   constructor: (@val, @path, @name) ->
+  childCount: ->
+    return 0 if @val is null
+    return Object.keys(@val).length
 
 class OpenFire
 
@@ -95,7 +98,10 @@ class OpenFire
   update: (obj) ->
     @po.queue.push(new QueueEntry('update', @path, obj))
 
-  set: (obj) ->
+  setAfterDisconnect: (obj) ->
+    @set(obj, "afterDisconnect:")
+
+  set: (obj, prefix = "") ->
     # The server will figure out what to do with the path
     ###
         The client will handle distinction of primitive types (int, string..)
@@ -122,9 +128,9 @@ class OpenFire
       _obj[lastPath] = obj
       if obj is null
         # If deleting use 'set' anyway
-        @po.queue.push(new QueueEntry('set', previous, _obj))
+        @po.queue.push(new QueueEntry(prefix + 'set', previous, _obj))
       else
-        @po.queue.push(new QueueEntry('update', previous, _obj))
+        @po.queue.push(new QueueEntry(prefix + 'update', previous, _obj))
 
       @po.queue.flush()
 
@@ -183,6 +189,12 @@ class OpenFire
       po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
 
       })
+
+      realtimeEngine.on("end", =>
+        DEBUG and log "Disconnected from realtime server"
+        @connected = no
+        @emitLocalEvent('disconnect', @path, null, null)
+      )
 
       realtimeEngine.on("open", =>
         DEBUG and log "Connected to realtime server"

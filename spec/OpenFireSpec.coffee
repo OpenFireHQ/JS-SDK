@@ -1,5 +1,9 @@
 db = null
 simpleObject = lol: true
+nestedObject =
+  lol: {
+    haha: 3
+  }
 
 describe "Initializing OpenFire", ->
   it "Should be available trough SDK class", ->
@@ -22,13 +26,14 @@ describe "Connection callback", ->
     )
 
 describe "Creation simple object", ->
-  it "Should write a object with contents { lol: true }", ->
+
+  it "Should write a object with contents " + JSON.stringify(simpleObject), ->
     db.set(simpleObject)
 
-describe "Callback test", ->
   it "Should give me back the contents of the simple object we created", (cb) ->
     callback = (snapshot) ->
       value = snapshot.val
+      console.log "Value: " + JSON.stringify(value)
       if value is null
         console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
       else
@@ -38,6 +43,43 @@ describe "Callback test", ->
 
     db.on("value", callback)
 
+describe "Creation of nested object", ->
+
+  it "Should write a object with contents " + JSON.stringify(nestedObject), ->
+    db.set(nestedObject)
+
+  it "Should give me back the contents of the simple object we created", (cb) ->
+    callback = (snapshot) ->
+      value = snapshot.val
+      console.log "Value: " + JSON.stringify(value)
+
+      if value is null
+        console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
+      else
+        if value.lol.haha is 3
+          db.off('value', callback)
+          cb()
+
+    db.on("value", callback)
+
+  it "Should give me back a part of the contents of the simple object we created when I go in a path deeper", (cb) ->
+    child = db.child("lol")
+    callback = (snapshot) ->
+      value = snapshot.val
+      console.log "Value: " + JSON.stringify(value)
+
+      if value is null
+        console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
+      else
+        if value.haha is 3
+          db.off('value', callback)
+          cb()
+
+    child.on("value", callback)
+
+return
+
+describe "Child Callback test", ->
   it "Should callback when adding a child", (cb) ->
     users = db.child("users")
     users.once("child_added", (user) ->
@@ -81,3 +123,13 @@ describe "Callback test", ->
       cb()
     )
     users.set(lol: null)
+
+  it "Should callback when deleting using alternative syntax", (cb) ->
+    users = db.child("users")
+    users.once("child_removed", (user) ->
+      console.log "User 4: ", JSON.stringify(user.val)
+      cb()
+    )
+
+    users.set(lol: { fuuu: "haha" }, peter: true)
+    users.set(null)
