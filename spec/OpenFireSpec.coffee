@@ -3,6 +3,9 @@ simpleObject = lol: true
 nestedObject =
   lol: {
     haha: 3
+    hahaImDeep: {
+      lol: "You're so deep, I can't even see you right now!"
+    }
   }
 
 describe "Initializing OpenFire", ->
@@ -77,7 +80,20 @@ describe "Creation of nested object", ->
 
     child.on("value", callback)
 
-return
+  it "Should give me back a part of the contents of the simple object we created when I go in a path deeper just once more", (cb) ->
+    child = db.child("lol").child("hahaImDeep")
+    callback = (snapshot) ->
+      value = snapshot.val
+      console.log "Value: " + JSON.stringify(value)
+
+      if value is null
+        console.log "Value is null, that's ok, it could not have been added to the server yet, keep waiting"
+      else
+        if value.hahaImDeep.lol is "You're so deep, I can't even see you right now!"
+          db.off('value', callback)
+          cb()
+
+    child.on("value", callback)
 
 describe "Child Callback test", ->
   it "Should callback when adding a child", (cb) ->
