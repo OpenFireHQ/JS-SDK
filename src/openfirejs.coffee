@@ -126,12 +126,8 @@ class OpenFire
 
       _obj = {}
       _obj[lastPath] = obj
-      if obj is null
-        # If deleting use 'set' anyway
-        @po.queue.push(new QueueEntry(prefix + 'set', previous, _obj))
-      else
-        @po.queue.push(new QueueEntry(prefix + 'update', previous, _obj))
-
+      
+      @po.queue.push(new QueueEntry(prefix + 'update', previous, _obj))
       @po.queue.flush()
 
   _set: (obj, cb) ->
