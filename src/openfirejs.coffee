@@ -83,7 +83,7 @@ class OpenFire
     @po.events["#{type}:#{@path}"] = events
 
     if type is 'connect'
-      if @connected
+      if @po.connected
         @emitLocalEvent('connect', @path, null, null)
       return
 
@@ -126,7 +126,7 @@ class OpenFire
 
       _obj = {}
       _obj[lastPath] = obj
-      
+
       @po.queue.push(new QueueEntry(prefix + 'update', previous, _obj))
       @po.queue.flush()
 
@@ -143,16 +143,28 @@ class OpenFire
       # Just emit a local event to ourselves
       # No changes could have been made to the server because we are setting a new object
       # The server will take care of other clients (it wont send a notification to us)
+      DEBUG and log 'Emitting "value" event locally'
       @emitLocalEvent('value', path, obj)
 
     cb(null)
 
   emitLocalEvent: (type, path, obj, name = null) ->
-    events = @po.events["#{type}:#{path}"]
-    if events
+
+    runEventsList = (events) ->
       snapshot = new Snapshot(obj, path, name)
       for event in events
         event(snapshot)
+
+    if path is null
+      for k of @po.events
+        if k.indexOf("#{type}:") is 0
+          events = @po.events[k]
+          if events
+            runEventsList events
+    else
+      events = @po.events["#{type}:#{path}"]
+      if events
+        runEventsList events
 
     return
 
@@ -161,8 +173,6 @@ class OpenFire
     # Instance vars
     @path = "/" + parts.slice(3, parts.length).join("/")
     @baseUrl = parts.slice(0, 3).join("/")
-    @connected = no
-
 
     DEBUG and log "Path: ", @path
 
@@ -171,6 +181,7 @@ class OpenFire
     if !po?
       DEBUG and log "Starting OpenFire Connection..."
       po = {}
+      po.connected = no
 
       # For now, a basic in-memory queue
       po.queue = new OpenFire.possibleQueues[0](@)
@@ -188,14 +199,14 @@ class OpenFire
 
       realtimeEngine.on("end", =>
         DEBUG and log "Disconnected from realtime server"
-        @connected = no
-        @emitLocalEvent('disconnect', @path, null, null)
+        po.connected = no
+        @emitLocalEvent('disconnect', null, null, null)
       )
 
       realtimeEngine.on("open", =>
         DEBUG and log "Connected to realtime server"
-        @connected = yes
-        @emitLocalEvent('connect', @path, null, null)
+        po.connected = yes
+        @emitLocalEvent('connect', null, null, null)
         realtimeEngine.on('data', (data) =>
           DEBUG and log "Got data ", JSON.stringify(data)
           { action } = data

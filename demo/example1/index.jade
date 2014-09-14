@@ -1,33 +1,37 @@
-<!DOCTYPE html>
-<html>
-  <title>Visitor Counter</title>
-  <body>
-    <h3>Welcome! There are currently &nbsp;<span id="counter"></span>&nbsp; People watching this site!</h3>
-  </body>
-  <script src="http://openfi.re/openfire.js"></script>
-  <script>
+doctype 5
+html
+  title Visitor Counter
+
+  body
+    h3
+      |Welcome! There are currently &nbsp;
+      span#counter
+      |&nbsp; People watching this site!
+
+  script(src="http://openfi.re/openfire.js")
+  script.
     // Intialize our DB
     // getting-started is our namespace for this example project
     var db = new OpenFire("http://localhost:5454/getting-started");
-    
+
     // connections is where we drop our users connection data in
     var connections = db.child("connections");
-    
+
     // connectedChild is the unique object
     // we hold the current connection for this client in
     var connectedChild = null;
-    
+
     // This function get's called every time the connections object changes.
     var connectionsChange = function(sn) {
         if (sn.val != null) {
             // Get the count - 1 to exclude ourselves
             var count = sn.childCount() - 1;
-            
+
             // Set the count to our counter in HTML
             document.getElementById("counter").innerHTML = count;
         }
     };
-    
+
     // Hook connectionsChange event to "value"
     // The server will call this to us each time the value of connections change.
     connections.on("value", connectionsChange);
@@ -36,11 +40,9 @@
         // And set it to true to mark the connected state
         connectedChild = connections.push();
         connectedChild.set(true);
-        
+
         // Use setAfterDisconnect to make sure that the value gets deleted
         // (set to null equals deletion in OpenFire)
         // to guarantee the counter only count our current visitors
         connectedChild.setAfterDisconnect(null);
     });
-  </script>
-</html>
