@@ -20,8 +20,8 @@
     // This function get's called every time the connections object changes.
     var connectionsChange = function(sn) {
         if (sn.val != null) {
-            // Get the count - 1 to exclude ourselves
-            var count = sn.childCount() - 1;
+            // Get the count
+            var count = sn.childCount();
             
             // Set the count to our counter in HTML
             document.getElementById("counter").innerHTML = count;
