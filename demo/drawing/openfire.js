@@ -1,504 +1,302 @@
 (function() {
     var BaseQueue, MemoryQueue, OpenFire, QueueEntry, Snapshot, __hasProp = {}.hasOwnProperty, __extends = function(child, parent) {
-        for (var key in parent) {
-            if (__hasProp.call(parent, key)) child[key] = parent[key];
-        }
         function ctor() {
             this.constructor = child;
         }
-        ctor.prototype = parent.prototype;
-        child.prototype = new ctor();
-        child.__super__ = parent.prototype;
-        return child;
+        for (var key in parent) __hasProp.call(parent, key) && (child[key] = parent[key]);
+        return ctor.prototype = parent.prototype, child.prototype = new ctor(), child.__super__ = parent.prototype, 
+        child;
     };
     QueueEntry = function() {
         function QueueEntry(action, path, obj) {
-            this.action = action;
-            this.path = path;
-            this.obj = obj;
+            this.action = action, this.path = path, this.obj = obj;
         }
         return QueueEntry;
-    }();
-    Snapshot = function() {
+    }(), Snapshot = function() {
         function Snapshot(val, path, name) {
-            this.val = val;
-            this.path = path;
-            this.name = name;
+            this.val = val, this.path = path, this.name = name;
         }
-        return Snapshot;
-    }();
-    OpenFire = function() {
-        var log, po, randomString, uniqueID;
-        po = null;
-        OpenFire.possibleQueues = [];
-        OpenFire.parentObjects = {};
-        log = function(msg) {
-            var arg, arguments_, _i, _len;
-            arguments_ = [ "OpenFire [SDK] -> " ];
-            for (_i = 0, _len = arguments.length; _i < _len; _i++) {
-                arg = arguments[_i];
-                arguments_.push(arg);
-            }
-            return console.log.apply(console, arguments_);
-        };
-        randomString = function(length, chars) {
-            var i, result;
-            result = "";
-            i = length;
-            while (i > 0) {
-                result += chars[Math.round(Math.random() * (chars.length - 1))];
-                --i;
-            }
-            return result;
-        };
-        uniqueID = function() {
-            var timestampBase36;
-            timestampBase36 = (Math.round(new Date().getTime() / 1e3) - 1409682796).toString(36);
-            return timestampBase36 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_");
-        };
-        OpenFire.prototype.child = function(path) {
-            path = this.path + "/" + path;
-            log("child path: ", path);
-            return new OpenFire(this.baseUrl + path);
-        };
-        OpenFire.prototype.name = function() {
-            var lastPath, parts;
-            parts = this.path.split("/");
-            lastPath = parts.slice(parts.length - 1, parts.length).join("/");
-            return lastPath;
-        };
-        OpenFire.prototype.once = function(type, callback) {
-            var cb;
-            cb = function(_this) {
-                return function(snapshot) {
-                    _this.off(type, cb);
-                    return callback(snapshot);
+        return Snapshot.prototype.childCount = function() {
+            return null === this.val ? 0 : Object.keys(this.val).length;
+        }, Snapshot;
+    }(), OpenFire = function() {
+        function OpenFire(url) {
+            var parts, realtimeEngine;
+            this.url = url, parts = this.url.split("/"), this.path = "/" + parts.slice(3, parts.length).join("/"), 
+            this.baseUrl = parts.slice(0, 3).join("/"), this.connected = !1, !0 && log("Path: ", this.path), 
+            po = OpenFire.parentObjects[this.baseUrl], null == po && (!0 && log("Starting OpenFire Connection..."), 
+            po = {}, po.queue = new OpenFire.possibleQueues[0](this), po.events = {}, po.queue.intFlush = setInterval(function() {
+                return po.queue.flushing ? void 0 : po.queue.flush();
+            }, 1e3), !0 && log("base url: " + this.baseUrl), po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(this.baseUrl, {}), 
+            realtimeEngine.on("end", function(_this) {
+                return function() {
+                    return !0 && log("Disconnected from realtime server"), _this.connected = !1, _this.emitLocalEvent("disconnect", _this.path, null, null);
                 };
-            }(this);
-            return this.on(type, cb);
-        };
-        OpenFire.prototype.off = function(type, callback) {
+            }(this)), realtimeEngine.on("open", function(_this) {
+                return function() {
+                    return !0 && log("Connected to realtime server"), _this.connected = !0, _this.emitLocalEvent("connect", _this.path, null, null), 
+                    realtimeEngine.on("data", function(data) {
+                        var action, name, obj, path, type;
+                        return !0 && log("Got data ", JSON.stringify(data)), action = data.action, "data" === action ? (name = data.name, 
+                        path = data.path, type = data.type, obj = data.obj, _this.emitLocalEvent(type, path, obj, name)) : void 0;
+                    });
+                };
+            }(this)), OpenFire.parentObjects[this.baseUrl] = po), this.po = po;
+        }
+        var log, po, randomString, uniqueID;
+        return po = null, OpenFire.possibleQueues = [], OpenFire.parentObjects = {}, 0 || !0 && (log = function() {
+            var arg, arguments_, _i, _len;
+            for (arguments_ = [ "OpenFire [SDK] -> " ], _i = 0, _len = arguments.length; _len > _i; _i++) arg = arguments[_i], 
+            arguments_.push(arg);
+            return console.log.apply(console, arguments_);
+        }), randomString = function(length, chars) {
+            var i, result;
+            for (result = "", i = length; i > 0; ) result += chars[Math.round(Math.random() * (chars.length - 1))], 
+            --i;
+            return result;
+        }, uniqueID = function() {
+            var timestampBase36;
+            return timestampBase36 = (Math.round(new Date().getTime() / 1e3) - 1409682796).toString(36), 
+            timestampBase36 + randomString(32, "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-_");
+        }, OpenFire.prototype.child = function(path) {
+            return path = this.path + "/" + path, !0 && log("child path: ", path), new OpenFire(this.baseUrl + path);
+        }, OpenFire.prototype.name = function() {
+            var lastPath, parts;
+            return parts = this.path.split("/"), lastPath = parts.slice(parts.length - 1, parts.length).join("/");
+        }, OpenFire.prototype.once = function(type, callback) {
+            var cb;
+            return cb = function(_this) {
+                return function(snapshot) {
+                    return _this.off(type, cb), callback(snapshot);
+                };
+            }(this), this.on(type, cb);
+        }, OpenFire.prototype.off = function(type, callback) {
             var event, events, i, _i, _len;
-            events = this.po.events["" + type + ":" + this.path];
-            if (events != null) {
-                i = 0;
-                for (_i = 0, _len = events.length; _i < _len; _i++) {
-                    event = events[_i];
-                    if (event === callback) {
-                        events.splice(i, 1);
-                        break;
-                    }
-                    i++;
+            if (events = this.po.events["" + type + ":" + this.path], null != events) for (i = 0, 
+            _i = 0, _len = events.length; _len > _i; _i++) {
+                if (event = events[_i], event === callback) {
+                    events.splice(i, 1);
+                    break;
                 }
+                i++;
             }
             return null;
-        };
-        OpenFire.prototype.on = function(type, callback) {
+        }, OpenFire.prototype.on = function(type, callback) {
             var attrs, events;
-            attrs = {
+            return attrs = {
                 action: "sub",
                 type: type,
                 path: this.path
-            };
-            events = this.po.events["" + type + ":" + this.path] || [];
-            events.push(callback);
-            this.po.events["" + type + ":" + this.path] = events;
-            this.po.realtimeEngine.write(attrs);
-            return log("Created event for " + type + ":" + this.path);
-        };
-        OpenFire.prototype.push = function() {
+            }, events = this.po.events["" + type + ":" + this.path] || [], events.push(callback), 
+            this.po.events["" + type + ":" + this.path] = events, "connect" === type ? void (this.connected && this.emitLocalEvent("connect", this.path, null, null)) : (this.po.realtimeEngine.write(attrs), 
+            !0 && log("Created event for " + type + ":" + this.path));
+        }, OpenFire.prototype.push = function() {
             var child;
-            child = this.child("" + uniqueID());
-            return child;
-        };
-        OpenFire.prototype.update = function(obj) {
+            return child = this.child(uniqueID());
+        }, OpenFire.prototype.update = function(obj) {
             return this.po.queue.push(new QueueEntry("update", this.path, obj));
-        };
-        OpenFire.prototype.set = function(obj) {
+        }, OpenFire.prototype.setAfterDisconnect = function(obj) {
+            return this.set(obj, "afterDisconnect:");
+        }, OpenFire.prototype.set = function(obj, prefix) {
             var lastPath, parts, previous, _obj;
-            if (typeof obj === "object") {
-                return this.po.queue.push(new QueueEntry("set", this.path, obj));
-            } else {
-                parts = this.path.split("/");
-                previous = parts.slice(0, parts.length - 1).join("/");
-                lastPath = parts.slice(parts.length - 1, parts.length).join("/");
-                _obj = {};
-                _obj[lastPath] = obj;
-                return this.po.queue.push(new QueueEntry("update", previous, _obj));
-            }
-        };
-        OpenFire.prototype._set = function(obj, cb) {
+            return null == prefix && (prefix = ""), null !== obj && "object" == typeof obj ? this.po.queue.push(new QueueEntry("set", this.path, obj)) : (parts = this.path.split("/"), 
+            previous = parts.slice(0, parts.length - 1).join("/"), lastPath = parts.slice(parts.length - 1, parts.length).join("/"), 
+            _obj = {}, _obj[lastPath] = obj, this.po.queue.push(new QueueEntry(prefix + "update", previous, _obj)), 
+            this.po.queue.flush());
+        }, OpenFire.prototype._set = function(obj, cb) {
             var action, path, _ref;
-            _ref = obj, action = _ref.action, obj = _ref.obj, path = _ref.path;
-            this.po.realtimeEngine.write({
+            return _ref = obj, action = _ref.action, obj = _ref.obj, path = _ref.path, this.po.realtimeEngine.write({
                 action: action,
                 obj: obj,
                 path: path
-            });
-            if (action === "set") {
-                this.emitLocalEvent("value", path, obj);
-            }
-            return cb(null);
-        };
-        OpenFire.prototype.emitLocalEvent = function(type, path, obj, name) {
+            }), "set" === action && this.emitLocalEvent("value", path, obj), cb(null);
+        }, OpenFire.prototype.emitLocalEvent = function(type, path, obj, name) {
             var event, events, snapshot, _i, _len;
-            if (name == null) {
-                name = null;
-            }
-            events = this.po.events["" + type + ":" + path];
-            if (events) {
-                snapshot = new Snapshot(obj, path, name);
-                for (_i = 0, _len = events.length; _i < _len; _i++) {
-                    event = events[_i];
-                    event(snapshot);
-                }
-            }
-        };
-        function OpenFire(url) {
-            var parts, realtimeEngine;
-            this.url = url;
-            parts = this.url.split("/");
-            this.path = "/" + parts.slice(3, parts.length).join("/");
-            this.baseUrl = parts.slice(0, 3).join("/");
-            log("Path: ", this.path);
-            po = OpenFire.parentObjects[this.baseUrl];
-            if (po == null) {
-                log("Starting OpenFire Connection...");
-                po = {};
-                po.queue = new OpenFire.possibleQueues[0](this);
-                po.events = {};
-                po.queue.intFlush = setInterval(function() {
-                    if (!po.queue.flushing) {
-                        return po.queue.flush();
-                    }
-                }, 500);
-                log("base url: " + this.baseUrl);
-                po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(this.baseUrl, {});
-                realtimeEngine.on("open", function(_this) {
-                    return function() {
-                        log("Connected to realtime server");
-                        return realtimeEngine.on("data", function(data) {
-                            var action, name, obj, path, type;
-                            log("Got data ", JSON.stringify(data));
-                            action = data.action;
-                            if (action === "data") {
-                                name = data.name, path = data.path, type = data.type, obj = data.obj;
-                                return _this.emitLocalEvent(type, path, obj, name);
-                            }
-                        });
-                    };
-                }(this));
-                OpenFire.parentObjects[this.baseUrl] = po;
-            }
-            this.po = po;
-        }
-        return OpenFire;
-    }();
-    window.OpenFire = OpenFire;
-    BaseQueue = function() {
-        BaseQueue.prototype.flushing = false;
+            if (null == name && (name = null), events = this.po.events["" + type + ":" + path]) for (snapshot = new Snapshot(obj, path, name), 
+            _i = 0, _len = events.length; _len > _i; _i++) (event = events[_i])(snapshot);
+        }, OpenFire;
+    }(), window.OpenFire = OpenFire, BaseQueue = function() {
         function BaseQueue(parent) {
             this.parent = parent;
         }
-        BaseQueue.prototype.push = function() {
+        return BaseQueue.prototype.flushing = !1, BaseQueue.prototype.push = function() {
             throw new Error("Dont call BaseQueue directly!");
-        };
-        return BaseQueue;
-    }();
-    OpenFire.BaseQueue = BaseQueue;
-    MemoryQueue = function(_super) {
-        __extends(MemoryQueue, _super);
+        }, BaseQueue;
+    }(), OpenFire.BaseQueue = BaseQueue, MemoryQueue = function(_super) {
         function MemoryQueue() {
             return MemoryQueue.__super__.constructor.apply(this, arguments);
         }
-        MemoryQueue.prototype.queue = [];
-        MemoryQueue.prototype.push = function(o) {
+        return __extends(MemoryQueue, _super), MemoryQueue.prototype.queue = [], MemoryQueue.prototype.push = function(o) {
             return this.queue.push(o);
-        };
-        MemoryQueue.prototype.flush = function() {
+        }, MemoryQueue.prototype.flush = function() {
             var _flush;
-            _flush = function(_this) {
+            return _flush = function(_this) {
                 return function() {
                     var entry;
-                    entry = _this.queue[0];
-                    return _this.parent._set(entry, function() {
-                        _this.queue.splice(0, 1);
-                        if (_this.queue.length > 0) {
-                            return setTimeout(function() {
-                                return _flush();
-                            }, 10);
-                        } else {
-                            return _this.flushing = false;
-                        }
+                    return entry = _this.queue[0], _this.parent._set(entry, function() {
+                        return _this.queue.splice(0, 1), _this.queue.length > 0 ? _flush() : _this.flushing = !1;
                     });
                 };
-            }(this);
-            if (this.queue.length > 0) {
-                this.flushing = true;
-                return _flush();
-            }
-        };
-        return MemoryQueue;
-    }(OpenFire.BaseQueue);
-    OpenFire.possibleQueues.push(MemoryQueue);
-}).call(this);
-
-(function(name, context, definition) {
-    context[name] = definition.call(context);
-    if (typeof module !== "undefined" && module.exports) {
-        module.exports = context[name];
-    } else if (typeof define == "function" && define.amd) {
-        define(function reference() {
-            return context[name];
-        });
-    }
-})("OFRealtimeEngine", this, function OFRealtimeEngine() {
+            }(this), this.queue.length > 0 ? (this.flushing = !0, _flush()) : void 0;
+        }, MemoryQueue;
+    }(OpenFire.BaseQueue), OpenFire.possibleQueues.push(MemoryQueue);
+}).call(this), function(name, context, definition) {
+    context[name] = definition.call(context), "undefined" != typeof module && module.exports ? module.exports = context[name] : "function" == typeof define && define.amd && define(function() {
+        return context[name];
+    });
+}("OFRealtimeEngine", this, function OFRealtimeEngine() {
     "use strict";
     function EE(fn, context, once) {
-        this.fn = fn;
-        this.context = context;
-        this.once = once || false;
+        this.fn = fn, this.context = context, this.once = once || !1;
     }
     function EventEmitter() {}
-    EventEmitter.prototype._events = undefined;
-    EventEmitter.prototype.listeners = function listeners(event) {
-        if (!this._events || !this._events[event]) return [];
-        for (var i = 0, l = this._events[event].length, ee = []; i < l; i++) {
-            ee.push(this._events[event][i].fn);
-        }
-        return ee;
-    };
-    EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
-        if (!this._events || !this._events[event]) return false;
-        var listeners = this._events[event], length = listeners.length, len = arguments.length, ee = listeners[0], args, i, j;
-        if (1 === length) {
-            if (ee.once) this.removeListener(event, ee.fn, true);
-            switch (len) {
-              case 1:
-                return ee.fn.call(ee.context), true;
-
-              case 2:
-                return ee.fn.call(ee.context, a1), true;
-
-              case 3:
-                return ee.fn.call(ee.context, a1, a2), true;
-
-              case 4:
-                return ee.fn.call(ee.context, a1, a2, a3), true;
-
-              case 5:
-                return ee.fn.call(ee.context, a1, a2, a3, a4), true;
-
-              case 6:
-                return ee.fn.call(ee.context, a1, a2, a3, a4, a5), true;
-            }
-            for (i = 1, args = new Array(len - 1); i < len; i++) {
-                args[i - 1] = arguments[i];
-            }
-            ee.fn.apply(ee.context, args);
-        } else {
-            for (i = 0; i < length; i++) {
-                if (listeners[i].once) this.removeListener(event, listeners[i].fn, true);
-                switch (len) {
-                  case 1:
-                    listeners[i].fn.call(listeners[i].context);
-                    break;
-
-                  case 2:
-                    listeners[i].fn.call(listeners[i].context, a1);
-                    break;
-
-                  case 3:
-                    listeners[i].fn.call(listeners[i].context, a1, a2);
-                    break;
-
-                  default:
-                    if (!args) for (j = 1, args = new Array(len - 1); j < len; j++) {
-                        args[j - 1] = arguments[j];
-                    }
-                    listeners[i].fn.apply(listeners[i].context, args);
-                }
-            }
-        }
-        return true;
-    };
-    EventEmitter.prototype.on = function on(event, fn, context) {
-        if (!this._events) this._events = {};
-        if (!this._events[event]) this._events[event] = [];
-        this._events[event].push(new EE(fn, context || this));
-        return this;
-    };
-    EventEmitter.prototype.once = function once(event, fn, context) {
-        if (!this._events) this._events = {};
-        if (!this._events[event]) this._events[event] = [];
-        this._events[event].push(new EE(fn, context || this, true));
-        return this;
-    };
-    EventEmitter.prototype.removeListener = function removeListener(event, fn, once) {
-        if (!this._events || !this._events[event]) return this;
-        var listeners = this._events[event], events = [];
-        if (fn) for (var i = 0, length = listeners.length; i < length; i++) {
-            if (listeners[i].fn !== fn && listeners[i].once !== once) {
-                events.push(listeners[i]);
-            }
-        }
-        if (events.length) this._events[event] = events; else this._events[event] = null;
-        return this;
-    };
-    EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
-        if (!this._events) return this;
-        if (event) this._events[event] = null; else this._events = {};
-        return this;
-    };
-    EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
-    EventEmitter.prototype.addListener = EventEmitter.prototype.on;
-    EventEmitter.prototype.setMaxListeners = function setMaxListeners() {
-        return this;
-    };
     function context(self, method) {
-        if (self instanceof OFRealtimeEngine) return;
-        var failure = new Error("OFRealtimeEngine#" + method + "'s context should called with a Primus instance");
-        if ("function" !== typeof self.listeners || !self.listeners("error").length) {
-            throw failure;
+        if (!(self instanceof OFRealtimeEngine)) {
+            var failure = new Error("OFRealtimeEngine#" + method + "'s context should called with a Primus instance");
+            if ("function" != typeof self.listeners || !self.listeners("error").length) throw failure;
+            self.emit("error", failure);
         }
-        self.emit("error", failure);
-    }
-    var defaultUrl;
-    try {
-        if (location.origin) {
-            defaultUrl = location.origin;
-        } else {
-            defaultUrl = location.protocol + "//" + location.hostname + (location.port ? ":" + location.port : "");
-        }
-    } catch (e) {
-        defaultUrl = "http://127.0.0.1";
     }
     function OFRealtimeEngine(url, options) {
         if (!(this instanceof OFRealtimeEngine)) return new OFRealtimeEngine(url, options);
-        if ("function" !== typeof this.client) {
-            var message = "The client library has not been compiled correctly, " + "see https://github.com/primus/primus#client-library for more details";
+        if ("function" != typeof this.client) {
+            var message = "The client library has not been compiled correctly, see https://github.com/primus/primus#client-library for more details";
             return this.critical(new Error(message));
         }
-        if ("object" === typeof url) {
-            options = url;
-            url = options.url || options.uri || defaultUrl;
-        } else {
-            options = options || {};
-        }
+        "object" == typeof url ? (options = url, url = options.url || options.uri || defaultUrl) : options = options || {};
         var primus = this;
-        options.queueSize = "queueSize" in options ? options.queueSize : Infinity;
-        options.timeout = "timeout" in options ? options.timeout : 1e4;
-        options.reconnect = "reconnect" in options ? options.reconnect : {};
-        options.ping = "ping" in options ? options.ping : 25e3;
-        options.pong = "pong" in options ? options.pong : 1e4;
-        options.strategy = "strategy" in options ? options.strategy : [];
-        options.transport = "transport" in options ? options.transport : {};
-        primus.buffer = [];
-        primus.writable = true;
-        primus.readable = true;
-        primus.url = primus.parse(url || defaultUrl);
-        primus.readyState = OFRealtimeEngine.CLOSED;
-        primus.options = options;
-        primus.timers = {};
-        primus.attempt = null;
-        primus.socket = null;
-        primus.latency = 0;
-        primus.stamps = 0;
-        primus.disconnect = false;
-        primus.transport = options.transport;
-        primus.transformers = {
+        options.queueSize = "queueSize" in options ? options.queueSize : 1/0, options.timeout = "timeout" in options ? options.timeout : 1e4, 
+        options.reconnect = "reconnect" in options ? options.reconnect : {}, options.ping = "ping" in options ? options.ping : 25e3, 
+        options.pong = "pong" in options ? options.pong : 1e4, options.strategy = "strategy" in options ? options.strategy : [], 
+        options.transport = "transport" in options ? options.transport : {}, primus.buffer = [], 
+        primus.writable = !0, primus.readable = !0, primus.url = primus.parse(url || defaultUrl), 
+        primus.readyState = OFRealtimeEngine.CLOSED, primus.options = options, primus.timers = {}, 
+        primus.attempt = null, primus.socket = null, primus.latency = 0, primus.stamps = 0, 
+        primus.disconnect = !1, primus.transport = options.transport, primus.transformers = {
             outgoing: [],
             incoming: []
-        };
-        if ("string" === typeof options.strategy) {
-            options.strategy = options.strategy.split(/\s?\,\s?/g);
-        }
-        if (false === options.strategy) {
-            options.strategy = [];
-        } else if (!options.strategy.length) {
-            options.strategy.push("disconnect", "online");
-            if (!this.authorization) options.strategy.push("timeout");
-        }
-        options.strategy = options.strategy.join(",").toLowerCase();
-        if (!Stream) EventEmitter.call(primus);
-        if ("websockets" in options) {
-            primus.AVOID_WEBSOCKETS = !options.websockets;
-        }
-        if ("network" in options) {
-            primus.NETWORK_EVENTS = options.network;
-        }
-        if (!options.manual) primus.timers.open = setTimeout(function open() {
+        }, "string" == typeof options.strategy && (options.strategy = options.strategy.split(/\s?\,\s?/g)), 
+        !1 === options.strategy ? options.strategy = [] : options.strategy.length || (options.strategy.push("disconnect", "online"), 
+        this.authorization || options.strategy.push("timeout")), options.strategy = options.strategy.join(",").toLowerCase(), 
+        Stream || EventEmitter.call(primus), "websockets" in options && (primus.AVOID_WEBSOCKETS = !options.websockets), 
+        "network" in options && (primus.NETWORK_EVENTS = options.network), options.manual || (primus.timers.open = setTimeout(function() {
             primus.clearTimeout("open").open();
-        }, 0);
-        primus.initialise(options);
+        }, 0)), primus.initialise(options);
     }
-    OFRealtimeEngine.require = function requires(name) {
-        if ("function" !== typeof require) return undefined;
-        return !("function" === typeof define && define.amd) ? require(name) : undefined;
+    EventEmitter.prototype._events = void 0, EventEmitter.prototype.listeners = function(event) {
+        if (!this._events || !this._events[event]) return [];
+        for (var i = 0, l = this._events[event].length, ee = []; l > i; i++) ee.push(this._events[event][i].fn);
+        return ee;
+    }, EventEmitter.prototype.emit = function(event, a1, a2, a3, a4, a5) {
+        if (!this._events || !this._events[event]) return !1;
+        var args, i, j, listeners = this._events[event], length = listeners.length, len = arguments.length, ee = listeners[0];
+        if (1 === length) {
+            switch (ee.once && this.removeListener(event, ee.fn, !0), len) {
+              case 1:
+                return ee.fn.call(ee.context), !0;
+
+              case 2:
+                return ee.fn.call(ee.context, a1), !0;
+
+              case 3:
+                return ee.fn.call(ee.context, a1, a2), !0;
+
+              case 4:
+                return ee.fn.call(ee.context, a1, a2, a3), !0;
+
+              case 5:
+                return ee.fn.call(ee.context, a1, a2, a3, a4), !0;
+
+              case 6:
+                return ee.fn.call(ee.context, a1, a2, a3, a4, a5), !0;
+            }
+            for (i = 1, args = new Array(len - 1); len > i; i++) args[i - 1] = arguments[i];
+            ee.fn.apply(ee.context, args);
+        } else for (i = 0; length > i; i++) switch (listeners[i].once && this.removeListener(event, listeners[i].fn, !0), 
+        len) {
+          case 1:
+            listeners[i].fn.call(listeners[i].context);
+            break;
+
+          case 2:
+            listeners[i].fn.call(listeners[i].context, a1);
+            break;
+
+          case 3:
+            listeners[i].fn.call(listeners[i].context, a1, a2);
+            break;
+
+          default:
+            if (!args) for (j = 1, args = new Array(len - 1); len > j; j++) args[j - 1] = arguments[j];
+            listeners[i].fn.apply(listeners[i].context, args);
+        }
+        return !0;
+    }, EventEmitter.prototype.on = function(event, fn, context) {
+        return this._events || (this._events = {}), this._events[event] || (this._events[event] = []), 
+        this._events[event].push(new EE(fn, context || this)), this;
+    }, EventEmitter.prototype.once = function(event, fn, context) {
+        return this._events || (this._events = {}), this._events[event] || (this._events[event] = []), 
+        this._events[event].push(new EE(fn, context || this, !0)), this;
+    }, EventEmitter.prototype.removeListener = function(event, fn, once) {
+        if (!this._events || !this._events[event]) return this;
+        var listeners = this._events[event], events = [];
+        if (fn) for (var i = 0, length = listeners.length; length > i; i++) listeners[i].fn !== fn && listeners[i].once !== once && events.push(listeners[i]);
+        return this._events[event] = events.length ? events : null, this;
+    }, EventEmitter.prototype.removeAllListeners = function(event) {
+        return this._events ? (event ? this._events[event] = null : this._events = {}, this) : this;
+    }, EventEmitter.prototype.off = EventEmitter.prototype.removeListener, EventEmitter.prototype.addListener = EventEmitter.prototype.on, 
+    EventEmitter.prototype.setMaxListeners = function() {
+        return this;
+    };
+    var defaultUrl;
+    try {
+        defaultUrl = location.origin ? location.origin : location.protocol + "//" + location.hostname + (location.port ? ":" + location.port : "");
+    } catch (e) {
+        defaultUrl = "http://127.0.0.1";
+    }
+    OFRealtimeEngine.require = function(name) {
+        return "function" != typeof require ? void 0 : "function" == typeof define && define.amd ? void 0 : require(name);
     };
     var Stream, parse;
     try {
-        OFRealtimeEngine.Stream = Stream = OFRealtimeEngine.require("stream");
-        parse = OFRealtimeEngine.require("url").parse;
+        OFRealtimeEngine.Stream = Stream = OFRealtimeEngine.require("stream"), parse = OFRealtimeEngine.require("url").parse, 
         OFRealtimeEngine.require("util").inherits(OFRealtimeEngine, Stream);
     } catch (e) {
-        OFRealtimeEngine.Stream = EventEmitter;
-        OFRealtimeEngine.prototype = new EventEmitter();
-        parse = function parse(url) {
-            var a = document.createElement("a"), data = {}, key;
+        OFRealtimeEngine.Stream = EventEmitter, OFRealtimeEngine.prototype = new EventEmitter(), 
+        parse = function(url) {
+            var key, a = document.createElement("a"), data = {};
             a.href = url;
-            for (key in a) {
-                if ("string" === typeof a[key] || "number" === typeof a[key]) {
-                    data[key] = a[key];
-                }
-            }
+            for (key in a) ("string" == typeof a[key] || "number" == typeof a[key]) && (data[key] = a[key]);
             if (!data.port) {
                 var splits = (data.href || "").split("/");
                 if (splits.length > 2) {
                     var host = splits[2], atSignIndex = host.lastIndexOf("@");
-                    if (~atSignIndex) host = host.slice(atSignIndex + 1);
-                    splits = host.split(":");
-                    if (splits.length === 2) data.port = splits[1];
+                    ~atSignIndex && (host = host.slice(atSignIndex + 1)), splits = host.split(":"), 
+                    2 === splits.length && (data.port = splits[1]);
                 }
             }
-            if (":" === data.protocol) {
-                data.protocol = data.href.substr(0, data.href.indexOf(":") + 1);
-            }
-            if ("0" === data.port) data.port = "";
-            if (~data.href.indexOf("@") && !data.auth) {
+            if (":" === data.protocol && (data.protocol = data.href.substr(0, data.href.indexOf(":") + 1)), 
+            "0" === data.port && (data.port = ""), ~data.href.indexOf("@") && !data.auth) {
                 var start = data.protocol.length + 2;
                 data.auth = data.href.slice(start, data.href.indexOf(data.pathname, start)).split("@")[0];
             }
             return data;
         };
     }
-    OFRealtimeEngine.OPENING = 1;
-    OFRealtimeEngine.CLOSED = 2;
-    OFRealtimeEngine.OPEN = 3;
-    OFRealtimeEngine.prototype.AVOID_WEBSOCKETS = false;
-    OFRealtimeEngine.prototype.NETWORK_EVENTS = false;
-    OFRealtimeEngine.prototype.online = true;
+    OFRealtimeEngine.OPENING = 1, OFRealtimeEngine.CLOSED = 2, OFRealtimeEngine.OPEN = 3, 
+    OFRealtimeEngine.prototype.AVOID_WEBSOCKETS = !1, OFRealtimeEngine.prototype.NETWORK_EVENTS = !1, 
+    OFRealtimeEngine.prototype.online = !0;
     try {
-        if (OFRealtimeEngine.prototype.NETWORK_EVENTS = "onLine" in navigator && (window.addEventListener || document.body.attachEvent)) {
-            if (!navigator.onLine) {
-                OFRealtimeEngine.prototype.online = false;
-            }
-        }
+        (OFRealtimeEngine.prototype.NETWORK_EVENTS = "onLine" in navigator && (window.addEventListener || document.body.attachEvent)) && (navigator.onLine || (OFRealtimeEngine.prototype.online = !1));
     } catch (e) {}
-    OFRealtimeEngine.prototype.ark = {};
-    OFRealtimeEngine.prototype.plugin = function plugin(name) {
-        context(this, "plugin");
-        if (name) return this.ark[name];
+    if (OFRealtimeEngine.prototype.ark = {}, OFRealtimeEngine.prototype.plugin = function(name) {
+        if (context(this, "plugin"), name) return this.ark[name];
         var plugins = {};
-        for (name in this.ark) {
-            plugins[name] = this.ark[name];
-        }
+        for (name in this.ark) plugins[name] = this.ark[name];
         return plugins;
-    };
-    OFRealtimeEngine.prototype.reserved = function reserved(evt) {
+    }, OFRealtimeEngine.prototype.reserved = function(evt) {
         return /^(incoming|outgoing)::/.test(evt) || evt in this.reserved.events;
-    };
-    OFRealtimeEngine.prototype.reserved.events = {
+    }, OFRealtimeEngine.prototype.reserved.events = {
         readyStateChange: 1,
         reconnecting: 1,
         reconnected: 1,
@@ -511,121 +309,59 @@
         open: 1,
         data: 1,
         end: 1
-    };
-    OFRealtimeEngine.prototype.initialise = function initialise(options) {
-        var primus = this, start;
-        primus.on("outgoing::open", function opening() {
-            var readyState = primus.readyState;
-            primus.readyState = OFRealtimeEngine.OPENING;
-            if (readyState !== primus.readyState) {
-                primus.emit("readyStateChange", "opening");
-            }
-            start = +new Date();
-        });
-        primus.on("incoming::open", function opened() {
-            var readyState = primus.readyState, reconnect = primus.attempt;
-            if (primus.attempt) primus.attempt = null;
-            primus.writable = true;
-            primus.readable = true;
-            if (!primus.online) {
-                primus.online = true;
-                primus.emit("online");
-            }
-            primus.readyState = OFRealtimeEngine.OPEN;
-            if (readyState !== primus.readyState) {
-                primus.emit("readyStateChange", "open");
-            }
-            primus.latency = +new Date() - start;
-            primus.emit("open");
-            if (reconnect) primus.emit("reconnected");
-            primus.clearTimeout("ping", "pong").heartbeat();
-            if (primus.buffer.length) {
-                for (var i = 0, length = primus.buffer.length; i < length; i++) {
-                    primus._write(primus.buffer[i]);
-                }
-                primus.buffer = [];
-            }
-        });
-        primus.on("incoming::pong", function pong(time) {
-            primus.online = true;
-            primus.clearTimeout("pong").heartbeat();
-            primus.latency = +new Date() - time;
-        });
-        primus.on("incoming::error", function error(e) {
-            var connect = primus.timers.connect, err = e;
-            if (primus.attempt) return primus.reconnect();
-            if ("string" === typeof e) {
-                err = new Error(e);
-            } else if (!(e instanceof Error) && "object" === typeof e) {
-                err = new Error(e.message || e.reason);
-                for (var key in e) {
-                    if (e.hasOwnProperty(key)) err[key] = e[key];
-                }
-            }
-            if (primus.listeners("error").length) primus.emit("error", err);
-            if (connect) {
-                if (~primus.options.strategy.indexOf("timeout")) primus.reconnect(); else primus.end();
-            }
-        });
-        primus.on("incoming::data", function message(raw) {
-            primus.decoder(raw, function decoding(err, data) {
-                if (err) return primus.listeners("error").length && primus.emit("error", err);
-                if (primus.protocol(data)) return;
-                primus.transforms(primus, primus, "incoming", data, raw);
-            });
-        });
-        primus.on("incoming::end", function end() {
-            var readyState = primus.readyState;
-            if (primus.disconnect) {
-                primus.disconnect = false;
-                return primus.end();
-            }
-            primus.readyState = OFRealtimeEngine.CLOSED;
-            if (readyState !== primus.readyState) {
-                primus.emit("readyStateChange", "end");
-            }
-            if (primus.timers.connect) primus.end();
-            if (readyState !== OFRealtimeEngine.OPEN) return;
-            this.writable = false;
-            this.readable = false;
-            for (var timeout in this.timers) {
-                this.clearTimeout(timeout);
-            }
-            primus.emit("close");
-            if (~primus.options.strategy.indexOf("disconnect")) {
-                return primus.reconnect();
-            }
-            primus.emit("outgoing::end");
-            primus.emit("end");
-        });
-        primus.client();
-        for (var plugin in primus.ark) {
-            primus.ark[plugin].call(primus, primus, options);
-        }
-        if (!primus.NETWORK_EVENTS) return primus;
+    }, OFRealtimeEngine.prototype.initialise = function(options) {
         function offline() {
-            if (!primus.online) return;
-            primus.online = false;
-            primus.emit("offline");
-            primus.end();
+            primus.online && (primus.online = !1, primus.emit("offline"), primus.end());
         }
         function online() {
-            if (primus.online) return;
-            primus.online = true;
-            primus.emit("online");
-            if (~primus.options.strategy.indexOf("online")) primus.reconnect();
+            primus.online || (primus.online = !0, primus.emit("online"), ~primus.options.strategy.indexOf("online") && primus.reconnect());
         }
-        if (window.addEventListener) {
-            window.addEventListener("offline", offline, false);
-            window.addEventListener("online", online, false);
-        } else if (document.body.attachEvent) {
-            document.body.attachEvent("onoffline", offline);
-            document.body.attachEvent("ononline", online);
-        }
-        return primus;
-    };
-    OFRealtimeEngine.prototype.protocol = function protocol(msg) {
-        if ("string" !== typeof msg || msg.indexOf("primus::") !== 0) return false;
+        var start, primus = this;
+        primus.on("outgoing::open", function() {
+            var readyState = primus.readyState;
+            primus.readyState = OFRealtimeEngine.OPENING, readyState !== primus.readyState && primus.emit("readyStateChange", "opening"), 
+            start = +new Date();
+        }), primus.on("incoming::open", function() {
+            var readyState = primus.readyState, reconnect = primus.attempt;
+            if (primus.attempt && (primus.attempt = null), primus.writable = !0, primus.readable = !0, 
+            primus.online || (primus.online = !0, primus.emit("online")), primus.readyState = OFRealtimeEngine.OPEN, 
+            readyState !== primus.readyState && primus.emit("readyStateChange", "open"), primus.latency = +new Date() - start, 
+            primus.emit("open"), reconnect && primus.emit("reconnected"), primus.clearTimeout("ping", "pong").heartbeat(), 
+            primus.buffer.length) {
+                for (var i = 0, length = primus.buffer.length; length > i; i++) primus._write(primus.buffer[i]);
+                primus.buffer = [];
+            }
+        }), primus.on("incoming::pong", function(time) {
+            primus.online = !0, primus.clearTimeout("pong").heartbeat(), primus.latency = +new Date() - time;
+        }), primus.on("incoming::error", function(e) {
+            var connect = primus.timers.connect, err = e;
+            if (primus.attempt) return primus.reconnect();
+            if ("string" == typeof e) err = new Error(e); else if (!(e instanceof Error) && "object" == typeof e) {
+                err = new Error(e.message || e.reason);
+                for (var key in e) e.hasOwnProperty(key) && (err[key] = e[key]);
+            }
+            primus.listeners("error").length && primus.emit("error", err), connect && (~primus.options.strategy.indexOf("timeout") ? primus.reconnect() : primus.end());
+        }), primus.on("incoming::data", function(raw) {
+            primus.decoder(raw, function(err, data) {
+                return err ? primus.listeners("error").length && primus.emit("error", err) : void (primus.protocol(data) || primus.transforms(primus, primus, "incoming", data, raw));
+            });
+        }), primus.on("incoming::end", function() {
+            var readyState = primus.readyState;
+            if (primus.disconnect) return primus.disconnect = !1, primus.end();
+            if (primus.readyState = OFRealtimeEngine.CLOSED, readyState !== primus.readyState && primus.emit("readyStateChange", "end"), 
+            primus.timers.connect && primus.end(), readyState === OFRealtimeEngine.OPEN) {
+                this.writable = !1, this.readable = !1;
+                for (var timeout in this.timers) this.clearTimeout(timeout);
+                if (primus.emit("close"), ~primus.options.strategy.indexOf("disconnect")) return primus.reconnect();
+                primus.emit("outgoing::end"), primus.emit("end");
+            }
+        }), primus.client();
+        for (var plugin in primus.ark) primus.ark[plugin].call(primus, primus, options);
+        return primus.NETWORK_EVENTS ? (window.addEventListener ? (window.addEventListener("offline", offline, !1), 
+        window.addEventListener("online", online, !1)) : document.body.attachEvent && (document.body.attachEvent("onoffline", offline), 
+        document.body.attachEvent("ononline", online)), primus) : primus;
+    }, OFRealtimeEngine.prototype.protocol = function(msg) {
+        if ("string" != typeof msg || 0 !== msg.indexOf("primus::")) return !1;
         var last = msg.indexOf(":", 8), value = msg.slice(last + 2);
         switch (msg.slice(8, last)) {
           case "pong":
@@ -633,9 +369,7 @@
             break;
 
           case "server":
-            if ("close" === value) {
-                this.disconnect = true;
-            }
+            "close" === value && (this.disconnect = !0);
             break;
 
           case "id":
@@ -643,299 +377,172 @@
             break;
 
           default:
-            return false;
+            return !1;
         }
-        return true;
-    };
-    OFRealtimeEngine.prototype.transforms = function transforms(primus, connection, type, data, raw) {
+        return !0;
+    }, OFRealtimeEngine.prototype.transforms = function(primus, connection, type, data, raw) {
         var packet = {
             data: data
         }, fns = primus.transformers[type];
-        (function transform(index, done) {
+        return function transform(index, done) {
             var transformer = fns[index++];
             if (!transformer) return done();
             if (1 === transformer.length) {
-                if (false === transformer.call(connection, packet)) {
-                    return;
-                }
+                if (!1 === transformer.call(connection, packet)) return;
                 return transform(index, done);
             }
-            transformer.call(connection, packet, function finished(err, arg) {
-                if (err) return connection.emit("error", err);
-                if (false === arg) return;
-                transform(index, done);
+            transformer.call(connection, packet, function(err, arg) {
+                return err ? connection.emit("error", err) : void (!1 !== arg && transform(index, done));
             });
-        })(0, function done() {
-            if ("incoming" === type) return connection.emit("data", packet.data, raw);
-            connection._write(packet.data);
-        });
-        return this;
-    };
-    OFRealtimeEngine.prototype.id = function id(fn) {
-        if (this.socket && this.socket.id) return fn(this.socket.id);
-        this.write("primus::id::");
-        return this.once("incoming::id", fn);
-    };
-    OFRealtimeEngine.prototype.open = function open() {
-        context(this, "open");
-        if (!this.attempt && this.options.timeout) this.timeout();
-        this.emit("outgoing::open");
-        return this;
-    };
-    OFRealtimeEngine.prototype.write = function write(data) {
-        context(this, "write");
-        this.transforms(this, this, "outgoing", data);
-        return true;
-    };
-    OFRealtimeEngine.prototype._write = function write(data) {
+        }(0, function() {
+            return "incoming" === type ? connection.emit("data", packet.data, raw) : void connection._write(packet.data);
+        }), this;
+    }, OFRealtimeEngine.prototype.id = function(fn) {
+        return this.socket && this.socket.id ? fn(this.socket.id) : (this.write("primus::id::"), 
+        this.once("incoming::id", fn));
+    }, OFRealtimeEngine.prototype.open = function() {
+        return context(this, "open"), !this.attempt && this.options.timeout && this.timeout(), 
+        this.emit("outgoing::open"), this;
+    }, OFRealtimeEngine.prototype.write = function(data) {
+        return context(this, "write"), this.transforms(this, this, "outgoing", data), !0;
+    }, OFRealtimeEngine.prototype._write = function(data) {
         var primus = this;
-        if (OFRealtimeEngine.OPEN !== primus.readyState) {
-            if (this.buffer.length === this.options.queueSize) {
-                this.buffer.splice(0, 1);
-            }
-            this.buffer.push(data);
-            return false;
-        }
-        primus.encoder(data, function encoded(err, packet) {
-            if (err) return primus.listeners("error").length && primus.emit("error", err);
-            primus.emit("outgoing::data", packet);
-        });
-        return true;
-    };
-    OFRealtimeEngine.prototype.heartbeat = function heartbeat() {
-        var primus = this;
-        if (!primus.options.ping) return primus;
+        return OFRealtimeEngine.OPEN !== primus.readyState ? (this.buffer.length === this.options.queueSize && this.buffer.splice(0, 1), 
+        this.buffer.push(data), !1) : (primus.encoder(data, function(err, packet) {
+            return err ? primus.listeners("error").length && primus.emit("error", err) : void primus.emit("outgoing::data", packet);
+        }), !0);
+    }, OFRealtimeEngine.prototype.heartbeat = function() {
         function pong() {
-            primus.clearTimeout("pong");
-            if (!primus.online) return;
-            primus.online = false;
-            primus.emit("offline");
-            primus.emit("incoming::end");
+            primus.clearTimeout("pong"), primus.online && (primus.online = !1, primus.emit("offline"), 
+            primus.emit("incoming::end"));
         }
         function ping() {
             var value = +new Date();
-            primus.clearTimeout("ping").write("primus::ping::" + value);
-            primus.emit("outgoing::ping", value);
+            primus.clearTimeout("ping").write("primus::ping::" + value), primus.emit("outgoing::ping", value), 
             primus.timers.pong = setTimeout(pong, primus.options.pong);
         }
-        primus.timers.ping = setTimeout(ping, primus.options.ping);
-        return this;
-    };
-    OFRealtimeEngine.prototype.timeout = function timeout() {
         var primus = this;
+        return primus.options.ping ? (primus.timers.ping = setTimeout(ping, primus.options.ping), 
+        this) : primus;
+    }, OFRealtimeEngine.prototype.timeout = function() {
         function remove() {
             primus.removeListener("error", remove).removeListener("open", remove).removeListener("end", remove).clearTimeout("connect");
         }
-        primus.timers.connect = setTimeout(function expired() {
-            remove();
-            if (primus.readyState === OFRealtimeEngine.OPEN || primus.attempt) return;
-            primus.emit("timeout");
-            if (~primus.options.strategy.indexOf("timeout")) primus.reconnect(); else primus.end();
-        }, primus.options.timeout);
-        return primus.on("error", remove).on("open", remove).on("end", remove);
-    };
-    OFRealtimeEngine.prototype.clearTimeout = function clear() {
-        for (var args = arguments, i = 0, l = args.length; i < l; i++) {
-            if (this.timers[args[i]]) clearTimeout(this.timers[args[i]]);
-            delete this.timers[args[i]];
-        }
+        var primus = this;
+        return primus.timers.connect = setTimeout(function() {
+            remove(), primus.readyState === OFRealtimeEngine.OPEN || primus.attempt || (primus.emit("timeout"), 
+            ~primus.options.strategy.indexOf("timeout") ? primus.reconnect() : primus.end());
+        }, primus.options.timeout), primus.on("error", remove).on("open", remove).on("end", remove);
+    }, OFRealtimeEngine.prototype.clearTimeout = function() {
+        for (var args = arguments, i = 0, l = args.length; l > i; i++) this.timers[args[i]] && clearTimeout(this.timers[args[i]]), 
+        delete this.timers[args[i]];
         return this;
-    };
-    OFRealtimeEngine.prototype.backoff = function backoff(callback, opts) {
+    }, OFRealtimeEngine.prototype.backoff = function(callback, opts) {
         opts = opts || {};
         var primus = this;
-        if (opts.backoff) return primus;
-        opts.maxDelay = "maxDelay" in opts ? opts.maxDelay : Infinity;
-        opts.minDelay = "minDelay" in opts ? opts.minDelay : 500;
-        opts.retries = "retries" in opts ? opts.retries : 10;
-        opts.attempt = (+opts.attempt || 0) + 1;
-        opts.factor = "factor" in opts ? opts.factor : 2;
-        if (opts.attempt > opts.retries) {
-            callback(new Error("Unable to retry"), opts);
-            return primus;
-        }
-        opts.backoff = true;
-        opts.timeout = opts.attempt !== 1 ? Math.min(Math.round((Math.random() + 1) * opts.minDelay * Math.pow(opts.factor, opts.attempt)), opts.maxDelay) : opts.minDelay;
-        primus.timers.reconnect = setTimeout(function delay() {
-            opts.backoff = false;
-            primus.clearTimeout("reconnect");
-            callback(undefined, opts);
-        }, opts.timeout);
-        primus.emit("reconnecting", opts);
-        return primus;
-    };
-    OFRealtimeEngine.prototype.reconnect = function reconnect() {
+        return opts.backoff ? primus : (opts.maxDelay = "maxDelay" in opts ? opts.maxDelay : 1/0, 
+        opts.minDelay = "minDelay" in opts ? opts.minDelay : 500, opts.retries = "retries" in opts ? opts.retries : 10, 
+        opts.attempt = (+opts.attempt || 0) + 1, opts.factor = "factor" in opts ? opts.factor : 2, 
+        opts.attempt > opts.retries ? (callback(new Error("Unable to retry"), opts), primus) : (opts.backoff = !0, 
+        opts.timeout = 1 !== opts.attempt ? Math.min(Math.round((Math.random() + 1) * opts.minDelay * Math.pow(opts.factor, opts.attempt)), opts.maxDelay) : opts.minDelay, 
+        primus.timers.reconnect = setTimeout(function() {
+            opts.backoff = !1, primus.clearTimeout("reconnect"), callback(void 0, opts);
+        }, opts.timeout), primus.emit("reconnecting", opts), primus));
+    }, OFRealtimeEngine.prototype.reconnect = function() {
         var primus = this;
-        primus.attempt = primus.attempt || primus.clone(primus.options.reconnect);
-        primus.backoff(function attempt(fail, backoff) {
-            if (fail) {
-                primus.attempt = null;
-                return primus.emit("end");
-            }
-            primus.emit("reconnect", backoff);
-            primus.emit("outgoing::reconnect");
-        }, primus.attempt);
-        return primus;
-    };
-    OFRealtimeEngine.prototype.end = function end(data) {
-        context(this, "end");
-        if (this.readyState === OFRealtimeEngine.CLOSED && !this.timers.connect) {
-            if (this.timers.reconnect) {
-                this.clearTimeout("reconnect");
-                this.attempt = null;
-                this.emit("end");
-            }
-            return this;
-        }
-        if (data !== undefined) this.write(data);
-        this.writable = false;
-        this.readable = false;
+        return primus.attempt = primus.attempt || primus.clone(primus.options.reconnect), 
+        primus.backoff(function(fail, backoff) {
+            return fail ? (primus.attempt = null, primus.emit("end")) : (primus.emit("reconnect", backoff), 
+            void primus.emit("outgoing::reconnect"));
+        }, primus.attempt), primus;
+    }, OFRealtimeEngine.prototype.end = function(data) {
+        if (context(this, "end"), this.readyState === OFRealtimeEngine.CLOSED && !this.timers.connect) return this.timers.reconnect && (this.clearTimeout("reconnect"), 
+        this.attempt = null, this.emit("end")), this;
+        void 0 !== data && this.write(data), this.writable = !1, this.readable = !1;
         var readyState = this.readyState;
-        this.readyState = OFRealtimeEngine.CLOSED;
-        if (readyState !== this.readyState) {
-            this.emit("readyStateChange", "end");
-        }
-        for (var timeout in this.timers) {
-            this.clearTimeout(timeout);
-        }
-        this.emit("outgoing::end");
-        this.emit("close");
-        this.emit("end");
-        return this;
-    };
-    OFRealtimeEngine.prototype.clone = function clone(obj) {
+        this.readyState = OFRealtimeEngine.CLOSED, readyState !== this.readyState && this.emit("readyStateChange", "end");
+        for (var timeout in this.timers) this.clearTimeout(timeout);
+        return this.emit("outgoing::end"), this.emit("close"), this.emit("end"), this;
+    }, OFRealtimeEngine.prototype.clone = function(obj) {
         return this.merge({}, obj);
-    };
-    OFRealtimeEngine.prototype.merge = function merge(target) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        for (var i = 0, l = args.length, key, obj; i < l; i++) {
+    }, OFRealtimeEngine.prototype.merge = function(target) {
+        for (var key, obj, args = Array.prototype.slice.call(arguments, 1), i = 0, l = args.length; l > i; i++) {
             obj = args[i];
-            for (key in obj) {
-                if (obj.hasOwnProperty(key)) target[key] = obj[key];
-            }
+            for (key in obj) obj.hasOwnProperty(key) && (target[key] = obj[key]);
         }
         return target;
-    };
-    OFRealtimeEngine.prototype.parse = parse;
-    OFRealtimeEngine.prototype.querystring = function querystring(query) {
-        var parser = /([^=?&]+)=([^&]*)/g, result = {}, part;
-        for (;part = parser.exec(query); result[decodeURIComponent(part[1])] = decodeURIComponent(part[2])) ;
+    }, OFRealtimeEngine.prototype.parse = parse, OFRealtimeEngine.prototype.querystring = function(query) {
+        for (var part, parser = /([^=?&]+)=([^&]*)/g, result = {}; part = parser.exec(query); result[decodeURIComponent(part[1])] = decodeURIComponent(part[2])) ;
         return result;
-    };
-    OFRealtimeEngine.prototype.querystringify = function querystringify(obj) {
+    }, OFRealtimeEngine.prototype.querystringify = function(obj) {
         var pairs = [];
-        for (var key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(obj[key]));
-            }
-        }
+        for (var key in obj) obj.hasOwnProperty(key) && pairs.push(encodeURIComponent(key) + "=" + encodeURIComponent(obj[key]));
         return pairs.join("&");
-    };
-    OFRealtimeEngine.prototype.uri = function uri(options) {
-        var url = this.url, server = [], qsa = false;
-        if (options.query) qsa = true;
-        options = options || {};
-        options.protocol = "protocol" in options ? options.protocol : "http";
-        options.query = url.search && "query" in options ? url.search.charAt(0) === "?" ? url.search.slice(1) : url.search : false;
-        options.secure = "secure" in options ? options.secure : url.protocol === "https:" || url.protocol === "wss:";
-        options.auth = "auth" in options ? options.auth : url.auth;
-        options.pathname = "pathname" in options ? options.pathname : this.pathname.slice(1);
-        options.port = "port" in options ? +options.port : +url.port || (options.secure ? 443 : 80);
-        options.host = "host" in options ? options.host : url.hostname || url.host.replace(":" + url.port, "");
+    }, OFRealtimeEngine.prototype.uri = function(options) {
+        var url = this.url, server = [], qsa = !1;
+        options.query && (qsa = !0), options = options || {}, options.protocol = "protocol" in options ? options.protocol : "http", 
+        options.query = url.search && "query" in options ? "?" === url.search.charAt(0) ? url.search.slice(1) : url.search : !1, 
+        options.secure = "secure" in options ? options.secure : "https:" === url.protocol || "wss:" === url.protocol, 
+        options.auth = "auth" in options ? options.auth : url.auth, options.pathname = "pathname" in options ? options.pathname : this.pathname.slice(1), 
+        options.port = "port" in options ? +options.port : +url.port || (options.secure ? 443 : 80), 
+        options.host = "host" in options ? options.host : url.hostname || url.host.replace(":" + url.port, ""), 
         this.emit("outgoing::url", options);
-        var host = 443 !== options.port && 80 !== options.port ? options.host + ":" + options.port : options.host;
-        var querystring = this.querystring(options.query || "");
-        querystring._primuscb = +new Date() + "-" + this.stamps++;
-        options.query = this.querystringify(querystring);
-        server.push(options.secure ? options.protocol + "s:" : options.protocol + ":", "");
-        if (options.auth) server.push(options.auth + "@" + host); else server.push(host);
-        if (options.pathname) server.push(options.pathname);
-        if (qsa) server.push("?" + options.query); else delete options.query;
-        if (options.object) return options;
-        return server.join("/");
-    };
-    OFRealtimeEngine.prototype.emits = function emits(event, parser) {
+        var host = 443 !== options.port && 80 !== options.port ? options.host + ":" + options.port : options.host, querystring = this.querystring(options.query || "");
+        return querystring._primuscb = +new Date() + "-" + this.stamps++, options.query = this.querystringify(querystring), 
+        server.push(options.secure ? options.protocol + "s:" : options.protocol + ":", ""), 
+        server.push(options.auth ? options.auth + "@" + host : host), options.pathname && server.push(options.pathname), 
+        qsa ? server.push("?" + options.query) : delete options.query, options.object ? options : server.join("/");
+    }, OFRealtimeEngine.prototype.emits = function(event, parser) {
         var primus = this;
-        return function emit(arg) {
+        return function(arg) {
             var data = parser ? parser.apply(primus, arguments) : arg;
-            setTimeout(function timeout() {
+            setTimeout(function() {
                 primus.emit("incoming::" + event, data);
             }, 0);
         };
-    };
-    OFRealtimeEngine.prototype.transform = function transform(type, fn) {
-        context(this, "transform");
-        if (!(type in this.transformers)) {
-            return this.critical(new Error("Invalid transformer type"));
-        }
-        this.transformers[type].push(fn);
-        return this;
-    };
-    OFRealtimeEngine.prototype.critical = function critical(err) {
-        if (this.listeners("error").length) {
-            this.emit("error", err);
-            return this;
-        }
+    }, OFRealtimeEngine.prototype.transform = function(type, fn) {
+        return context(this, "transform"), type in this.transformers ? (this.transformers[type].push(fn), 
+        this) : this.critical(new Error("Invalid transformer type"));
+    }, OFRealtimeEngine.prototype.critical = function(err) {
+        if (this.listeners("error").length) return this.emit("error", err), this;
         throw err;
-    };
-    OFRealtimeEngine.connect = function connect(url, options) {
+    }, OFRealtimeEngine.connect = function(url, options) {
         return new OFRealtimeEngine(url, options);
-    };
-    OFRealtimeEngine.EventEmitter = EventEmitter;
-    OFRealtimeEngine.prototype.client = function client() {
-        var primus = this, socket;
-        var factory = function factory() {
-            if ("undefined" !== typeof eio) return eio;
+    }, OFRealtimeEngine.EventEmitter = EventEmitter, OFRealtimeEngine.prototype.client = function() {
+        var socket, primus = this, Factory = function() {
+            if ("undefined" != typeof SockJS) return SockJS;
             try {
-                return Primus.require("engine.io-client");
+                return Primus.require("sockjs-client-node");
             } catch (e) {}
-            return undefined;
+            return void 0;
         }();
-        if (!factory) return primus.critical(new Error("Missing required `engine.io-client` module. Please run `npm install --save engine.io-client`"));
-        primus.on("outgoing::open", function opening() {
-            primus.emit("outgoing::end");
-            primus.socket = socket = factory(primus.merge(primus.transport, primus.url, primus.uri({
-                protocol: "http",
-                query: true,
-                object: true
-            }), {
-                rememberUpgrade: false,
-                forceBase64: true,
-                enablesXDR: false,
-                timestampRequests: true,
-                path: this.pathname,
-                transports: !primus.AVOID_WEBSOCKETS ? [ "polling", "websocket" ] : [ "polling" ]
-            }));
-            if (factory.sockets && factory.sockets.length) {
-                factory.sockets.length = 0;
-            }
-            socket.on("open", primus.emits("open"));
-            socket.on("error", primus.emits("error"));
-            socket.on("close", primus.emits("end"));
-            socket.on("message", primus.emits("data"));
-        });
-        primus.on("outgoing::data", function write(message) {
-            if (socket) socket.send(message);
-        });
-        primus.on("outgoing::reconnect", function reconnect() {
-            if (socket) {
-                socket.close();
-                socket.open();
-            } else {
-                primus.emit("outgoing::open");
-            }
-        });
-        primus.on("outgoing::end", function close() {
-            if (socket) {
-                socket.removeAllListeners();
-                socket.close();
-                socket = null;
-            }
-        });
-    };
-    OFRealtimeEngine.prototype.authorization = false;
-    OFRealtimeEngine.prototype.pathname = "/realtime";
-    OFRealtimeEngine.prototype.encoder = function encoder(data, fn) {
+        return Factory ? (primus.on("outgoing::open", function() {
+            primus.emit("outgoing::end"), primus.socket = socket = new Factory(primus.uri({
+                protocol: "http"
+            }), null, primus.merge(primus.transport, {
+                info: {
+                    websocket: !primus.AVOID_WEBSOCKETS,
+                    cookie_needed: !0
+                }
+            })), socket.onopen = primus.emits("open"), socket.onerror = primus.emits("error"), 
+            socket.onclose = function(e) {
+                var event = e && e.code > 1e3 ? "error" : "end";
+                setTimeout(function() {
+                    primus.emit("incoming::" + event, e);
+                }, 0);
+            }, socket.onmessage = primus.emits("data", function(evt) {
+                return evt.data;
+            });
+        }), primus.on("outgoing::data", function(message) {
+            socket && socket.send(message);
+        }), primus.on("outgoing::reconnect", function() {
+            primus.emit("outgoing::end"), primus.emit("outgoing::open");
+        }), void primus.on("outgoing::end", function() {
+            socket && (socket.onerror = socket.onopen = socket.onclose = socket.onmessage = function() {}, 
+            socket.close(), socket = null);
+        })) : primus.critical(new Error("Missing required `sockjs-client-node` module. Please run `npm install --save sockjs-client-node`"));
+    }, OFRealtimeEngine.prototype.authorization = !1, OFRealtimeEngine.prototype.pathname = "/realtime", 
+    OFRealtimeEngine.prototype.encoder = function(data, fn) {
         var err;
         try {
             data = JSON.stringify(data);
@@ -943,2051 +550,1183 @@
             err = e;
         }
         fn(err, data);
-    };
-    OFRealtimeEngine.prototype.decoder = function decoder(data, fn) {
+    }, OFRealtimeEngine.prototype.decoder = function(data, fn) {
         var err;
-        if ("string" !== typeof data) return fn(err, data);
+        if ("string" != typeof data) return fn(err, data);
         try {
             data = JSON.parse(data);
         } catch (e) {
             err = e;
         }
         fn(err, data);
-    };
-    OFRealtimeEngine.prototype.version = "2.4.4";
-    if ("object" === typeof JSON && "function" === typeof JSON.stringify && JSON.stringify([ "\u2028\u2029" ]) === '["\u2028\u2029"]') {
-        JSON.stringify = function replace(stringify) {
-            var u2028 = /\u2028/g, u2029 = /\u2029/g;
-            return function patched(value, replacer, spaces) {
-                var result = stringify.call(this, value, replacer, spaces);
-                if (result) {
-                    if (~result.indexOf("\u2028")) result = result.replace(u2028, "\\u2028");
-                    if (~result.indexOf("\u2029")) result = result.replace(u2029, "\\u2029");
-                }
-                return result;
-            };
-        }(JSON.stringify);
-    }
-    if ("undefined" !== typeof document && "undefined" !== typeof navigator) {
-        if (document.addEventListener) {
-            document.addEventListener("keydown", function keydown(e) {
-                if (e.keyCode !== 27 || !e.preventDefault) return;
-                e.preventDefault();
-            }, false);
-        }
+    }, OFRealtimeEngine.prototype.version = "2.4.4", "object" == typeof JSON && "function" == typeof JSON.stringify && '["\u2028\u2029"]' === JSON.stringify([ "\u2028\u2029" ]) && (JSON.stringify = function(stringify) {
+        var u2028 = /\u2028/g, u2029 = /\u2029/g;
+        return function(value, replacer, spaces) {
+            var result = stringify.call(this, value, replacer, spaces);
+            return result && (~result.indexOf("\u2028") && (result = result.replace(u2028, "\\u2028")), 
+            ~result.indexOf("\u2029") && (result = result.replace(u2029, "\\u2029"))), result;
+        };
+    }(JSON.stringify)), "undefined" != typeof document && "undefined" != typeof navigator) {
+        document.addEventListener && document.addEventListener("keydown", function(e) {
+            27 === e.keyCode && e.preventDefault && e.preventDefault();
+        }, !1);
         var ua = (navigator.userAgent || "").toLowerCase(), parsed = ua.match(/.+(?:rv|it|ra|ie)[\/: ](\d+)\.(\d+)(?:\.(\d+))?/) || [], version = +[ parsed[1], parsed[2] ].join(".");
-        if (!~ua.indexOf("chrome") && ~ua.indexOf("safari") && version < 534.54) {
-            OFRealtimeEngine.prototype.AVOID_WEBSOCKETS = true;
-        }
+        !~ua.indexOf("chrome") && ~ua.indexOf("safari") && 534.54 > version && (OFRealtimeEngine.prototype.AVOID_WEBSOCKETS = !0);
     }
     return OFRealtimeEngine;
 });
 
-(function e(t, n, r) {
-    function s(o, u) {
-        if (!n[o]) {
-            if (!t[o]) {
-                var a = typeof require == "function" && require;
-                if (!u && a) return a(o, !0);
-                if (i) return i(o, !0);
-                throw new Error("Cannot find module '" + o + "'");
+var JSON;
+
+JSON || (JSON = {}), function() {
+    function str(a, b) {
+        var c, d, e, f, h, g = gap, i = b[a];
+        switch (i && "object" == typeof i && "function" == typeof i.toJSON && (i = i.toJSON(a)), 
+        "function" == typeof rep && (i = rep.call(b, a, i)), typeof i) {
+          case "string":
+            return quote(i);
+
+          case "number":
+            return isFinite(i) ? String(i) : "null";
+
+          case "boolean":
+          case "null":
+            return String(i);
+
+          case "object":
+            if (!i) return "null";
+            if (gap += indent, h = [], "[object Array]" === Object.prototype.toString.apply(i)) {
+                for (f = i.length, c = 0; f > c; c += 1) h[c] = str(c, i) || "null";
+                return e = 0 === h.length ? "[]" : gap ? "[\n" + gap + h.join(",\n" + gap) + "\n" + g + "]" : "[" + h.join(",") + "]", 
+                gap = g, e;
             }
-            var f = n[o] = {
-                exports: {}
-            };
-            t[o][0].call(f.exports, function(e) {
-                var n = t[o][1][e];
-                return s(n ? n : e);
-            }, f, f.exports, e, t, n, r);
+            if (rep && "object" == typeof rep) for (f = rep.length, c = 0; f > c; c += 1) "string" == typeof rep[c] && (d = rep[c], 
+            e = str(d, i), e && h.push(quote(d) + (gap ? ": " : ":") + e)); else for (d in i) Object.prototype.hasOwnProperty.call(i, d) && (e = str(d, i), 
+            e && h.push(quote(d) + (gap ? ": " : ":") + e));
+            return e = 0 === h.length ? "{}" : gap ? "{\n" + gap + h.join(",\n" + gap) + "\n" + g + "}" : "{" + h.join(",") + "}", 
+            gap = g, e;
         }
-        return n[o].exports;
     }
-    var i = typeof require == "function" && require;
-    for (var o = 0; o < r.length; o++) s(r[o]);
-    return s;
-})({
-    1: [ function(_dereq_, module, exports) {
-        self["eio"] = _dereq_("./index.js");
-    }, {
-        "./index.js": 2
-    } ],
-    2: [ function(_dereq_, module, exports) {
-        module.exports = _dereq_("./lib/");
-    }, {
-        "./lib/": 3
-    } ],
-    3: [ function(_dereq_, module, exports) {
-        module.exports = _dereq_("./socket");
-        module.exports.parser = _dereq_("engine.io-parser");
-    }, {
-        "./socket": 4,
-        "engine.io-parser": 15
-    } ],
-    4: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var transports = _dereq_("./transports");
-            var Emitter = _dereq_("component-emitter");
-            var debug = _dereq_("debug")("engine.io-client:socket");
-            var index = _dereq_("indexof");
-            var parser = _dereq_("engine.io-parser");
-            var parseuri = _dereq_("parseuri");
-            var parsejson = _dereq_("parsejson");
-            var parseqs = _dereq_("parseqs");
-            module.exports = Socket;
-            function noop() {}
-            function Socket(uri, opts) {
-                if (!(this instanceof Socket)) return new Socket(uri, opts);
-                opts = opts || {};
-                if (uri && "object" == typeof uri) {
-                    opts = uri;
-                    uri = null;
-                }
-                if (uri) {
-                    uri = parseuri(uri);
-                    opts.host = uri.host;
-                    opts.secure = uri.protocol == "https" || uri.protocol == "wss";
-                    opts.port = uri.port;
-                    if (uri.query) opts.query = uri.query;
-                }
-                this.secure = null != opts.secure ? opts.secure : global.location && "https:" == location.protocol;
-                if (opts.host) {
-                    var pieces = opts.host.split(":");
-                    opts.hostname = pieces.shift();
-                    if (pieces.length) opts.port = pieces.pop();
-                }
-                this.agent = opts.agent || false;
-                this.hostname = opts.hostname || (global.location ? location.hostname : "localhost");
-                this.port = opts.port || (global.location && location.port ? location.port : this.secure ? 443 : 80);
-                this.query = opts.query || {};
-                if ("string" == typeof this.query) this.query = parseqs.decode(this.query);
-                this.upgrade = false !== opts.upgrade;
-                this.path = (opts.path || "/engine.io").replace(/\/$/, "") + "/";
-                this.forceJSONP = !!opts.forceJSONP;
-                this.forceBase64 = !!opts.forceBase64;
-                this.timestampParam = opts.timestampParam || "t";
-                this.timestampRequests = opts.timestampRequests;
-                this.transports = opts.transports || [ "polling", "websocket" ];
-                this.readyState = "";
-                this.writeBuffer = [];
-                this.callbackBuffer = [];
-                this.policyPort = opts.policyPort || 843;
-                this.rememberUpgrade = opts.rememberUpgrade || false;
-                this.open();
-                this.binaryType = null;
-                this.onlyBinaryUpgrades = opts.onlyBinaryUpgrades;
-            }
-            Socket.priorWebsocketSuccess = false;
-            Emitter(Socket.prototype);
-            Socket.protocol = parser.protocol;
-            Socket.Socket = Socket;
-            Socket.Transport = _dereq_("./transport");
-            Socket.transports = _dereq_("./transports");
-            Socket.parser = _dereq_("engine.io-parser");
-            Socket.prototype.createTransport = function(name) {
-                debug('creating transport "%s"', name);
-                var query = clone(this.query);
-                query.EIO = parser.protocol;
-                query.transport = name;
-                if (this.id) query.sid = this.id;
-                var transport = new transports[name]({
-                    agent: this.agent,
-                    hostname: this.hostname,
-                    port: this.port,
-                    secure: this.secure,
-                    path: this.path,
-                    query: query,
-                    forceJSONP: this.forceJSONP,
-                    forceBase64: this.forceBase64,
-                    timestampRequests: this.timestampRequests,
-                    timestampParam: this.timestampParam,
-                    policyPort: this.policyPort,
-                    socket: this
-                });
-                return transport;
-            };
-            function clone(obj) {
-                var o = {};
-                for (var i in obj) {
-                    if (obj.hasOwnProperty(i)) {
-                        o[i] = obj[i];
-                    }
-                }
-                return o;
-            }
-            Socket.prototype.open = function() {
-                var transport;
-                if (this.rememberUpgrade && Socket.priorWebsocketSuccess && this.transports.indexOf("websocket") != -1) {
-                    transport = "websocket";
-                } else {
-                    transport = this.transports[0];
-                }
-                this.readyState = "opening";
-                var transport = this.createTransport(transport);
-                transport.open();
-                this.setTransport(transport);
-            };
-            Socket.prototype.setTransport = function(transport) {
-                debug("setting transport %s", transport.name);
-                var self = this;
-                if (this.transport) {
-                    debug("clearing existing transport %s", this.transport.name);
-                    this.transport.removeAllListeners();
-                }
-                this.transport = transport;
-                transport.on("drain", function() {
-                    self.onDrain();
-                }).on("packet", function(packet) {
-                    self.onPacket(packet);
-                }).on("error", function(e) {
-                    self.onError(e);
-                }).on("close", function() {
-                    self.onClose("transport close");
-                });
-            };
-            Socket.prototype.probe = function(name) {
-                debug('probing transport "%s"', name);
-                var transport = this.createTransport(name, {
-                    probe: 1
-                }), failed = false, self = this;
-                Socket.priorWebsocketSuccess = false;
-                function onTransportOpen() {
-                    if (self.onlyBinaryUpgrades) {
-                        var upgradeLosesBinary = !this.supportsBinary && self.transport.supportsBinary;
-                        failed = failed || upgradeLosesBinary;
-                    }
-                    if (failed) return;
-                    debug('probe transport "%s" opened', name);
-                    transport.send([ {
-                        type: "ping",
-                        data: "probe"
-                    } ]);
-                    transport.once("packet", function(msg) {
-                        if (failed) return;
-                        if ("pong" == msg.type && "probe" == msg.data) {
-                            debug('probe transport "%s" pong', name);
-                            self.upgrading = true;
-                            self.emit("upgrading", transport);
-                            Socket.priorWebsocketSuccess = "websocket" == transport.name;
-                            debug('pausing current transport "%s"', self.transport.name);
-                            self.transport.pause(function() {
-                                if (failed) return;
-                                if ("closed" == self.readyState || "closing" == self.readyState) {
-                                    return;
-                                }
-                                debug("changing transport and sending upgrade packet");
-                                cleanup();
-                                self.setTransport(transport);
-                                transport.send([ {
-                                    type: "upgrade"
-                                } ]);
-                                self.emit("upgrade", transport);
-                                transport = null;
-                                self.upgrading = false;
-                                self.flush();
-                            });
-                        } else {
-                            debug('probe transport "%s" failed', name);
-                            var err = new Error("probe error");
-                            err.transport = transport.name;
-                            self.emit("upgradeError", err);
-                        }
-                    });
-                }
-                function freezeTransport() {
-                    if (failed) return;
-                    failed = true;
-                    cleanup();
-                    transport.close();
-                    transport = null;
-                }
-                function onerror(err) {
-                    var error = new Error("probe error: " + err);
-                    error.transport = transport.name;
-                    freezeTransport();
-                    debug('probe transport "%s" failed because of error: %s', name, err);
-                    self.emit("upgradeError", error);
-                }
-                function onTransportClose() {
-                    onerror("transport closed");
-                }
-                function onclose() {
-                    onerror("socket closed");
-                }
-                function onupgrade(to) {
-                    if (transport && to.name != transport.name) {
-                        debug('"%s" works - aborting "%s"', to.name, transport.name);
-                        freezeTransport();
-                    }
-                }
-                function cleanup() {
-                    transport.removeListener("open", onTransportOpen);
-                    transport.removeListener("error", onerror);
-                    transport.removeListener("close", onTransportClose);
-                    self.removeListener("close", onclose);
-                    self.removeListener("upgrading", onupgrade);
-                }
-                transport.once("open", onTransportOpen);
-                transport.once("error", onerror);
-                transport.once("close", onTransportClose);
-                this.once("close", onclose);
-                this.once("upgrading", onupgrade);
-                transport.open();
-            };
-            Socket.prototype.onOpen = function() {
-                debug("socket open");
-                this.readyState = "open";
-                Socket.priorWebsocketSuccess = "websocket" == this.transport.name;
-                this.emit("open");
-                this.flush();
-                if ("open" == this.readyState && this.upgrade && this.transport.pause) {
-                    debug("starting upgrade probes");
-                    for (var i = 0, l = this.upgrades.length; i < l; i++) {
-                        this.probe(this.upgrades[i]);
-                    }
-                }
-            };
-            Socket.prototype.onPacket = function(packet) {
-                if ("opening" == this.readyState || "open" == this.readyState) {
-                    debug('socket receive: type "%s", data "%s"', packet.type, packet.data);
-                    this.emit("packet", packet);
-                    this.emit("heartbeat");
-                    switch (packet.type) {
-                      case "open":
-                        this.onHandshake(parsejson(packet.data));
-                        break;
-
-                      case "pong":
-                        this.setPing();
-                        break;
-
-                      case "error":
-                        var err = new Error("server error");
-                        err.code = packet.data;
-                        this.emit("error", err);
-                        break;
-
-                      case "message":
-                        this.emit("data", packet.data);
-                        this.emit("message", packet.data);
-                        break;
-                    }
-                } else {
-                    debug('packet received with socket readyState "%s"', this.readyState);
-                }
-            };
-            Socket.prototype.onHandshake = function(data) {
-                this.emit("handshake", data);
-                this.id = data.sid;
-                this.transport.query.sid = data.sid;
-                this.upgrades = this.filterUpgrades(data.upgrades);
-                this.pingInterval = data.pingInterval;
-                this.pingTimeout = data.pingTimeout;
-                this.onOpen();
-                if ("closed" == this.readyState) return;
-                this.setPing();
-                this.removeListener("heartbeat", this.onHeartbeat);
-                this.on("heartbeat", this.onHeartbeat);
-            };
-            Socket.prototype.onHeartbeat = function(timeout) {
-                clearTimeout(this.pingTimeoutTimer);
-                var self = this;
-                self.pingTimeoutTimer = setTimeout(function() {
-                    if ("closed" == self.readyState) return;
-                    self.onClose("ping timeout");
-                }, timeout || self.pingInterval + self.pingTimeout);
-            };
-            Socket.prototype.setPing = function() {
-                var self = this;
-                clearTimeout(self.pingIntervalTimer);
-                self.pingIntervalTimer = setTimeout(function() {
-                    debug("writing ping packet - expecting pong within %sms", self.pingTimeout);
-                    self.ping();
-                    self.onHeartbeat(self.pingTimeout);
-                }, self.pingInterval);
-            };
-            Socket.prototype.ping = function() {
-                this.sendPacket("ping");
-            };
-            Socket.prototype.onDrain = function() {
-                for (var i = 0; i < this.prevBufferLen; i++) {
-                    if (this.callbackBuffer[i]) {
-                        this.callbackBuffer[i]();
-                    }
-                }
-                this.writeBuffer.splice(0, this.prevBufferLen);
-                this.callbackBuffer.splice(0, this.prevBufferLen);
-                this.prevBufferLen = 0;
-                if (this.writeBuffer.length == 0) {
-                    this.emit("drain");
-                } else {
-                    this.flush();
-                }
-            };
-            Socket.prototype.flush = function() {
-                if ("closed" != this.readyState && this.transport.writable && !this.upgrading && this.writeBuffer.length) {
-                    debug("flushing %d packets in socket", this.writeBuffer.length);
-                    this.transport.send(this.writeBuffer);
-                    this.prevBufferLen = this.writeBuffer.length;
-                    this.emit("flush");
-                }
-            };
-            Socket.prototype.write = Socket.prototype.send = function(msg, fn) {
-                this.sendPacket("message", msg, fn);
-                return this;
-            };
-            Socket.prototype.sendPacket = function(type, data, fn) {
-                var packet = {
-                    type: type,
-                    data: data
-                };
-                this.emit("packetCreate", packet);
-                this.writeBuffer.push(packet);
-                this.callbackBuffer.push(fn);
-                this.flush();
-            };
-            Socket.prototype.close = function() {
-                if ("opening" == this.readyState || "open" == this.readyState) {
-                    this.onClose("forced close");
-                    debug("socket closing - telling transport to close");
-                    this.transport.close();
-                }
-                return this;
-            };
-            Socket.prototype.onError = function(err) {
-                debug("socket error %j", err);
-                Socket.priorWebsocketSuccess = false;
-                this.emit("error", err);
-                this.onClose("transport error", err);
-            };
-            Socket.prototype.onClose = function(reason, desc) {
-                if ("opening" == this.readyState || "open" == this.readyState) {
-                    debug('socket close with reason: "%s"', reason);
-                    var self = this;
-                    clearTimeout(this.pingIntervalTimer);
-                    clearTimeout(this.pingTimeoutTimer);
-                    setTimeout(function() {
-                        self.writeBuffer = [];
-                        self.callbackBuffer = [];
-                        self.prevBufferLen = 0;
-                    }, 0);
-                    this.transport.removeAllListeners("close");
-                    this.transport.close();
-                    this.transport.removeAllListeners();
-                    this.readyState = "closed";
-                    this.id = null;
-                    this.emit("close", reason, desc);
-                }
-            };
-            Socket.prototype.filterUpgrades = function(upgrades) {
-                var filteredUpgrades = [];
-                for (var i = 0, j = upgrades.length; i < j; i++) {
-                    if (~index(this.transports, upgrades[i])) filteredUpgrades.push(upgrades[i]);
-                }
-                return filteredUpgrades;
-            };
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {
-        "./transport": 5,
-        "./transports": 6,
-        "component-emitter": 12,
-        debug: 14,
-        "engine.io-parser": 15,
-        indexof: 24,
-        parsejson: 25,
-        parseqs: 26,
-        parseuri: 27
-    } ],
-    5: [ function(_dereq_, module, exports) {
-        var parser = _dereq_("engine.io-parser");
-        var Emitter = _dereq_("component-emitter");
-        module.exports = Transport;
-        function Transport(opts) {
-            this.path = opts.path;
-            this.hostname = opts.hostname;
-            this.port = opts.port;
-            this.secure = opts.secure;
-            this.query = opts.query;
-            this.timestampParam = opts.timestampParam;
-            this.timestampRequests = opts.timestampRequests;
-            this.readyState = "";
-            this.agent = opts.agent || false;
-            this.socket = opts.socket;
+    function quote(a) {
+        return escapable.lastIndex = 0, escapable.test(a) ? '"' + a.replace(escapable, function(a) {
+            var b = meta[a];
+            return "string" == typeof b ? b : "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+        }) + '"' : '"' + a + '"';
+    }
+    function f(a) {
+        return 10 > a ? "0" + a : a;
+    }
+    "function" != typeof Date.prototype.toJSON && (Date.prototype.toJSON = function() {
+        return isFinite(this.valueOf()) ? this.getUTCFullYear() + "-" + f(this.getUTCMonth() + 1) + "-" + f(this.getUTCDate()) + "T" + f(this.getUTCHours()) + ":" + f(this.getUTCMinutes()) + ":" + f(this.getUTCSeconds()) + "Z" : null;
+    }, String.prototype.toJSON = Number.prototype.toJSON = Boolean.prototype.toJSON = function() {
+        return this.valueOf();
+    });
+    var cx = /[\u0000\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, gap, indent, meta = {
+        "\b": "\\b",
+        "	": "\\t",
+        "\n": "\\n",
+        "\f": "\\f",
+        "\r": "\\r",
+        '"': '\\"',
+        "\\": "\\\\"
+    }, rep;
+    "function" != typeof JSON.stringify && (JSON.stringify = function(a, b, c) {
+        var d;
+        if (gap = "", indent = "", "number" == typeof c) for (d = 0; c > d; d += 1) indent += " "; else "string" == typeof c && (indent = c);
+        if (rep = b, !b || "function" == typeof b || "object" == typeof b && "number" == typeof b.length) return str("", {
+            "": a
+        });
+        throw new Error("JSON.stringify");
+    }), "function" != typeof JSON.parse && (JSON.parse = function(text, reviver) {
+        function walk(a, b) {
+            var c, d, e = a[b];
+            if (e && "object" == typeof e) for (c in e) Object.prototype.hasOwnProperty.call(e, c) && (d = walk(e, c), 
+            void 0 !== d ? e[c] = d : delete e[c]);
+            return reviver.call(a, b, e);
         }
-        Emitter(Transport.prototype);
-        Transport.timestamps = 0;
-        Transport.prototype.onError = function(msg, desc) {
-            var err = new Error(msg);
-            err.type = "TransportError";
-            err.description = desc;
-            this.emit("error", err);
-            return this;
+        var j;
+        if (text = String(text), cx.lastIndex = 0, cx.test(text) && (text = text.replace(cx, function(a) {
+            return "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4);
+        })), /^[\],:{}\s]*$/.test(text.replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "@").replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]").replace(/(?:^|:|,)(?:\s*\[)+/g, ""))) return j = eval("(" + text + ")"), 
+        "function" == typeof reviver ? walk({
+            "": j
+        }, "") : j;
+        throw new SyntaxError("JSON.parse");
+    });
+}(), SockJS = function() {
+    var _document = document, _window = window, utils = {}, REventTarget = function() {};
+    REventTarget.prototype.addEventListener = function(eventType, listener) {
+        this._listeners || (this._listeners = {}), eventType in this._listeners || (this._listeners[eventType] = []);
+        var arr = this._listeners[eventType];
+        -1 === utils.arrIndexOf(arr, listener) && arr.push(listener);
+    }, REventTarget.prototype.removeEventListener = function(eventType, listener) {
+        if (this._listeners && eventType in this._listeners) {
+            var arr = this._listeners[eventType], idx = utils.arrIndexOf(arr, listener);
+            return -1 !== idx ? void (arr.length > 1 ? this._listeners[eventType] = arr.slice(0, idx).concat(arr.slice(idx + 1)) : delete this._listeners[eventType]) : void 0;
+        }
+    }, REventTarget.prototype.dispatchEvent = function(event) {
+        var t = event.type, args = Array.prototype.slice.call(arguments, 0);
+        if (this["on" + t] && this["on" + t].apply(this, args), this._listeners && t in this._listeners) for (var i = 0; i < this._listeners[t].length; i++) this._listeners[t][i].apply(this, args);
+    };
+    var SimpleEvent = function(type, obj) {
+        if (this.type = type, "undefined" != typeof obj) for (var k in obj) obj.hasOwnProperty(k) && (this[k] = obj[k]);
+    };
+    SimpleEvent.prototype.toString = function() {
+        var r = [];
+        for (var k in this) if (this.hasOwnProperty(k)) {
+            var v = this[k];
+            "function" == typeof v && (v = "[function]"), r.push(k + "=" + v);
+        }
+        return "SimpleEvent(" + r.join(", ") + ")";
+    };
+    var EventEmitter = function(events) {
+        var that = this;
+        that._events = events || [], that._listeners = {};
+    };
+    EventEmitter.prototype.emit = function(type) {
+        var that = this;
+        if (that._verifyType(type), !that._nuked) {
+            var args = Array.prototype.slice.call(arguments, 1);
+            if (that["on" + type] && that["on" + type].apply(that, args), type in that._listeners) for (var i = 0; i < that._listeners[type].length; i++) that._listeners[type][i].apply(that, args);
+        }
+    }, EventEmitter.prototype.on = function(type, callback) {
+        var that = this;
+        that._verifyType(type), that._nuked || (type in that._listeners || (that._listeners[type] = []), 
+        that._listeners[type].push(callback));
+    }, EventEmitter.prototype._verifyType = function(type) {
+        var that = this;
+        -1 === utils.arrIndexOf(that._events, type) && utils.log("Event " + JSON.stringify(type) + " not listed " + JSON.stringify(that._events) + " in " + that);
+    }, EventEmitter.prototype.nuke = function() {
+        var that = this;
+        that._nuked = !0;
+        for (var i = 0; i < that._events.length; i++) delete that[that._events[i]];
+        that._listeners = {};
+    };
+    var random_string_chars = "abcdefghijklmnopqrstuvwxyz0123456789_";
+    utils.random_string = function(length, max) {
+        max = max || random_string_chars.length;
+        var i, ret = [];
+        for (i = 0; length > i; i++) ret.push(random_string_chars.substr(Math.floor(Math.random() * max), 1));
+        return ret.join("");
+    }, utils.random_number = function(max) {
+        return Math.floor(Math.random() * max);
+    }, utils.random_number_string = function(max) {
+        var t = ("" + (max - 1)).length, p = Array(t + 1).join("0");
+        return (p + utils.random_number(max)).slice(-t);
+    }, utils.getOrigin = function(url) {
+        if (url.match(/^file:\/\//)) return null;
+        var hostname, port, parts = url.split("/"), protocol = parts[0], host = parts[2], atSignIndex = host.lastIndexOf("@");
+        return ~atSignIndex && (host = host.slice(atSignIndex + 1)), parts = host.split(":"), 
+        hostname = parts[0], port = parts[1], port || (port = "https:" === protocol ? 443 : 80), 
+        protocol + "//" + hostname + ":" + port;
+    }, utils.isSameOriginUrl = function(url_a, url_b) {
+        return url_b || (url_b = _window.location.href), utils.getOrigin(url_a) === utils.getOrigin(url_b);
+    }, utils.getParentDomain = function(url) {
+        if (/^[0-9.]*$/.test(url)) return url;
+        if (/^\[/.test(url)) return url;
+        if (!/[.]/.test(url)) return url;
+        var parts = url.split(".").slice(1);
+        return parts.join(".");
+    }, utils.objectExtend = function(dst, src) {
+        for (var k in src) src.hasOwnProperty(k) && (dst[k] = src[k]);
+        return dst;
+    };
+    var WPrefix = "_jp";
+    utils.polluteGlobalNamespace = function() {
+        WPrefix in _window || (_window[WPrefix] = {});
+    }, utils.closeFrame = function(code, reason) {
+        return "c" + JSON.stringify([ code, reason ]);
+    }, utils.userSetCode = function(code) {
+        return 1e3 === code || code >= 3e3 && 4999 >= code;
+    }, utils.countRTO = function(rtt) {
+        return rtt > 100 ? 4 * rtt : 300 + rtt;
+    }, utils.log = function() {
+        _window.console && console.log && console.log.apply && console.log.apply(console, arguments);
+    }, utils.bind = function(fun, that) {
+        return fun.bind ? fun.bind(that) : function() {
+            return fun.apply(that, arguments);
         };
-        Transport.prototype.open = function() {
-            if ("closed" == this.readyState || "" == this.readyState) {
-                this.readyState = "opening";
-                this.doOpen();
-            }
-            return this;
+    }, utils.flatUrl = function(url) {
+        return -1 === url.indexOf("?") && -1 === url.indexOf("#");
+    }, utils.amendUrl = function(url) {
+        var dl = _document.location;
+        if (!url) throw new Error("Wrong url for SockJS");
+        if (!utils.flatUrl(url)) throw new Error("Only basic urls are supported in SockJS");
+        return 0 === url.indexOf("//") && (url = dl.protocol + url), 0 === url.indexOf("/") && (url = dl.protocol + "//" + dl.host + url), 
+        url = url.replace(/[/]+$/, "");
+    }, utils.arrIndexOf = function(arr, obj) {
+        for (var i = 0; i < arr.length; i++) if (arr[i] === obj) return i;
+        return -1;
+    }, utils.arrSkip = function(arr, obj) {
+        var idx = utils.arrIndexOf(arr, obj);
+        if (-1 === idx) return arr.slice();
+        var dst = arr.slice(0, idx);
+        return dst.concat(arr.slice(idx + 1));
+    }, utils.isArray = Array.isArray || function(value) {
+        return {}.toString.call(value).indexOf("Array") >= 0;
+    }, utils.delay = function(t, fun) {
+        return "function" == typeof t && (fun = t, t = 0), setTimeout(fun, t);
+    };
+    var extra_lookup, json_escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g, json_lookup = {
+        "\x00": "\\u0000",
+        "": "\\u0001",
+        "": "\\u0002",
+        "": "\\u0003",
+        "": "\\u0004",
+        "": "\\u0005",
+        "": "\\u0006",
+        "": "\\u0007",
+        "\b": "\\b",
+        "	": "\\t",
+        "\n": "\\n",
+        "": "\\u000b",
+        "\f": "\\f",
+        "\r": "\\r",
+        "": "\\u000e",
+        "": "\\u000f",
+        "": "\\u0010",
+        "": "\\u0011",
+        "": "\\u0012",
+        "": "\\u0013",
+        "": "\\u0014",
+        "": "\\u0015",
+        "": "\\u0016",
+        "": "\\u0017",
+        "": "\\u0018",
+        "": "\\u0019",
+        "": "\\u001a",
+        "": "\\u001b",
+        "": "\\u001c",
+        "": "\\u001d",
+        "": "\\u001e",
+        "": "\\u001f",
+        '"': '\\"',
+        "\\": "\\\\",
+        "": "\\u007f",
+        "": "\\u0080",
+        "": "\\u0081",
+        "": "\\u0082",
+        "": "\\u0083",
+        "": "\\u0084",
+        "": "\\u0085",
+        "": "\\u0086",
+        "": "\\u0087",
+        "": "\\u0088",
+        "": "\\u0089",
+        "": "\\u008a",
+        "": "\\u008b",
+        "": "\\u008c",
+        "": "\\u008d",
+        "": "\\u008e",
+        "": "\\u008f",
+        "": "\\u0090",
+        "": "\\u0091",
+        "": "\\u0092",
+        "": "\\u0093",
+        "": "\\u0094",
+        "": "\\u0095",
+        "": "\\u0096",
+        "": "\\u0097",
+        "": "\\u0098",
+        "": "\\u0099",
+        "": "\\u009a",
+        "": "\\u009b",
+        "": "\\u009c",
+        "": "\\u009d",
+        "": "\\u009e",
+        "": "\\u009f",
+        "­": "\\u00ad",
+        "؀": "\\u0600",
+        "؁": "\\u0601",
+        "؂": "\\u0602",
+        "؃": "\\u0603",
+        "؄": "\\u0604",
+        "܏": "\\u070f",
+        "឴": "\\u17b4",
+        "឵": "\\u17b5",
+        "‌": "\\u200c",
+        "‍": "\\u200d",
+        "‎": "\\u200e",
+        "‏": "\\u200f",
+        "\u2028": "\\u2028",
+        "\u2029": "\\u2029",
+        "‪": "\\u202a",
+        "‫": "\\u202b",
+        "‬": "\\u202c",
+        "‭": "\\u202d",
+        "‮": "\\u202e",
+        " ": "\\u202f",
+        "⁠": "\\u2060",
+        "⁡": "\\u2061",
+        "⁢": "\\u2062",
+        "⁣": "\\u2063",
+        "⁤": "\\u2064",
+        "⁥": "\\u2065",
+        "⁦": "\\u2066",
+        "⁧": "\\u2067",
+        "⁨": "\\u2068",
+        "⁩": "\\u2069",
+        "⁪": "\\u206a",
+        "⁫": "\\u206b",
+        "⁬": "\\u206c",
+        "⁭": "\\u206d",
+        "⁮": "\\u206e",
+        "⁯": "\\u206f",
+        "﻿": "\\ufeff",
+        "￰": "\\ufff0",
+        "￱": "\\ufff1",
+        "￲": "\\ufff2",
+        "￳": "\\ufff3",
+        "￴": "\\ufff4",
+        "￵": "\\ufff5",
+        "￶": "\\ufff6",
+        "￷": "\\ufff7",
+        "￸": "\\ufff8",
+        "￹": "\\ufff9",
+        "￺": "\\ufffa",
+        "￻": "\\ufffb",
+        "￼": "\\ufffc",
+        "�": "\\ufffd",
+        "￾": "\\ufffe",
+        "￿": "\\uffff"
+    }, extra_escapable = /[\x00-\x1f\ud800-\udfff\ufffe\uffff\u0300-\u0333\u033d-\u0346\u034a-\u034c\u0350-\u0352\u0357-\u0358\u035c-\u0362\u0374\u037e\u0387\u0591-\u05af\u05c4\u0610-\u0617\u0653-\u0654\u0657-\u065b\u065d-\u065e\u06df-\u06e2\u06eb-\u06ec\u0730\u0732-\u0733\u0735-\u0736\u073a\u073d\u073f-\u0741\u0743\u0745\u0747\u07eb-\u07f1\u0951\u0958-\u095f\u09dc-\u09dd\u09df\u0a33\u0a36\u0a59-\u0a5b\u0a5e\u0b5c-\u0b5d\u0e38-\u0e39\u0f43\u0f4d\u0f52\u0f57\u0f5c\u0f69\u0f72-\u0f76\u0f78\u0f80-\u0f83\u0f93\u0f9d\u0fa2\u0fa7\u0fac\u0fb9\u1939-\u193a\u1a17\u1b6b\u1cda-\u1cdb\u1dc0-\u1dcf\u1dfc\u1dfe\u1f71\u1f73\u1f75\u1f77\u1f79\u1f7b\u1f7d\u1fbb\u1fbe\u1fc9\u1fcb\u1fd3\u1fdb\u1fe3\u1feb\u1fee-\u1fef\u1ff9\u1ffb\u1ffd\u2000-\u2001\u20d0-\u20d1\u20d4-\u20d7\u20e7-\u20e9\u2126\u212a-\u212b\u2329-\u232a\u2adc\u302b-\u302c\uaab2-\uaab3\uf900-\ufa0d\ufa10\ufa12\ufa15-\ufa1e\ufa20\ufa22\ufa25-\ufa26\ufa2a-\ufa2d\ufa30-\ufa6d\ufa70-\ufad9\ufb1d\ufb1f\ufb2a-\ufb36\ufb38-\ufb3c\ufb3e\ufb40-\ufb41\ufb43-\ufb44\ufb46-\ufb4e\ufff0-\uffff]/g, JSONQuote = JSON && JSON.stringify || function(string) {
+        return json_escapable.lastIndex = 0, json_escapable.test(string) && (string = string.replace(json_escapable, function(a) {
+            return json_lookup[a];
+        })), '"' + string + '"';
+    }, unroll_lookup = function(escapable) {
+        var i, unrolled = {}, c = [];
+        for (i = 0; 65536 > i; i++) c.push(String.fromCharCode(i));
+        return escapable.lastIndex = 0, c.join("").replace(escapable, function(a) {
+            return unrolled[a] = "\\u" + ("0000" + a.charCodeAt(0).toString(16)).slice(-4), 
+            "";
+        }), escapable.lastIndex = 0, unrolled;
+    };
+    utils.quote = function(string) {
+        var quoted = JSONQuote(string);
+        return extra_escapable.lastIndex = 0, extra_escapable.test(quoted) ? (extra_lookup || (extra_lookup = unroll_lookup(extra_escapable)), 
+        quoted.replace(extra_escapable, function(a) {
+            return extra_lookup[a];
+        })) : quoted;
+    };
+    var _all_protocols = [ "websocket", "xdr-streaming", "xhr-streaming", "iframe-eventsource", "iframe-htmlfile", "xdr-polling", "xhr-polling", "iframe-xhr-polling", "jsonp-polling" ];
+    utils.probeProtocols = function() {
+        for (var probed = {}, i = 0; i < _all_protocols.length; i++) {
+            var protocol = _all_protocols[i];
+            probed[protocol] = SockJS[protocol] && SockJS[protocol].enabled();
+        }
+        return probed;
+    }, utils.detectProtocols = function(probed, protocols_whitelist, info) {
+        var pe = {}, protocols = [];
+        protocols_whitelist || (protocols_whitelist = _all_protocols);
+        for (var i = 0; i < protocols_whitelist.length; i++) {
+            var protocol = protocols_whitelist[i];
+            pe[protocol] = probed[protocol];
+        }
+        var maybe_push = function(protos) {
+            var proto = protos.shift();
+            pe[proto] ? protocols.push(proto) : protos.length > 0 && maybe_push(protos);
         };
-        Transport.prototype.close = function() {
-            if ("opening" == this.readyState || "open" == this.readyState) {
-                this.doClose();
-                this.onClose();
-            }
-            return this;
-        };
-        Transport.prototype.send = function(packets) {
-            if ("open" == this.readyState) {
-                this.write(packets);
-            } else {
-                throw new Error("Transport not open");
-            }
-        };
-        Transport.prototype.onOpen = function() {
-            this.readyState = "open";
-            this.writable = true;
-            this.emit("open");
-        };
-        Transport.prototype.onData = function(data) {
+        return info.websocket !== !1 && maybe_push([ "websocket" ]), pe["xhr-streaming"] && !info.null_origin ? protocols.push("xhr-streaming") : !pe["xdr-streaming"] || info.cookie_needed || info.null_origin ? maybe_push([ "iframe-eventsource", "iframe-htmlfile" ]) : protocols.push("xdr-streaming"), 
+        pe["xhr-polling"] && !info.null_origin ? protocols.push("xhr-polling") : !pe["xdr-polling"] || info.cookie_needed || info.null_origin ? maybe_push([ "iframe-xhr-polling", "jsonp-polling" ]) : protocols.push("xdr-polling"), 
+        protocols;
+    };
+    var MPrefix = "_sockjs_global";
+    utils.createHook = function() {
+        var window_id = "a" + utils.random_string(8);
+        if (!(MPrefix in _window)) {
+            var map = {};
+            _window[MPrefix] = function(window_id) {
+                return window_id in map || (map[window_id] = {
+                    id: window_id,
+                    del: function() {
+                        delete map[window_id];
+                    }
+                }), map[window_id];
+            };
+        }
+        return _window[MPrefix](window_id);
+    }, utils.attachMessage = function(listener) {
+        utils.attachEvent("message", listener);
+    }, utils.attachEvent = function(event, listener) {
+        "undefined" != typeof _window.addEventListener ? _window.addEventListener(event, listener, !1) : (_document.attachEvent("on" + event, listener), 
+        _window.attachEvent("on" + event, listener));
+    }, utils.detachMessage = function(listener) {
+        utils.detachEvent("message", listener);
+    }, utils.detachEvent = function(event, listener) {
+        "undefined" != typeof _window.addEventListener ? _window.removeEventListener(event, listener, !1) : (_document.detachEvent("on" + event, listener), 
+        _window.detachEvent("on" + event, listener));
+    };
+    var on_unload = {}, after_unload = !1, trigger_unload_callbacks = function() {
+        for (var ref in on_unload) on_unload[ref](), delete on_unload[ref];
+    }, unload_triggered = function() {
+        after_unload || (after_unload = !0, trigger_unload_callbacks());
+    };
+    utils.attachEvent("unload", unload_triggered), utils.unload_add = function(listener) {
+        var ref = utils.random_string(8);
+        return on_unload[ref] = listener, after_unload && utils.delay(trigger_unload_callbacks), 
+        ref;
+    }, utils.unload_del = function(ref) {
+        ref in on_unload && delete on_unload[ref];
+    }, utils.createIframe = function(iframe_url, error_callback) {
+        var tref, unload_ref, iframe = _document.createElement("iframe"), unattach = function() {
+            clearTimeout(tref);
             try {
-                var packet = parser.decodePacket(data, this.socket.binaryType);
-                this.onPacket(packet);
-            } catch (e) {
-                e.data = data;
-                this.onError("parser decode error", e);
-            }
-        };
-        Transport.prototype.onPacket = function(packet) {
-            this.emit("packet", packet);
-        };
-        Transport.prototype.onClose = function() {
-            this.readyState = "closed";
-            this.emit("close");
-        };
-    }, {
-        "component-emitter": 12,
-        "engine.io-parser": 15
-    } ],
-    6: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var XMLHttpRequest = _dereq_("xmlhttprequest");
-            var XHR = _dereq_("./polling-xhr");
-            var JSONP = _dereq_("./polling-jsonp");
-            var websocket = _dereq_("./websocket");
-            exports.polling = polling;
-            exports.websocket = websocket;
-            function polling(opts) {
-                var xhr;
-                var xd = false;
-                if (global.location) {
-                    var isSSL = "https:" == location.protocol;
-                    var port = location.port;
-                    if (!port) {
-                        port = isSSL ? 443 : 80;
-                    }
-                    xd = opts.hostname != location.hostname || port != opts.port;
-                }
-                opts.xdomain = xd;
-                xhr = new XMLHttpRequest(opts);
-                if ("open" in xhr && !opts.forceJSONP) {
-                    return new XHR(opts);
-                } else {
-                    return new JSONP(opts);
-                }
-            }
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {
-        "./polling-jsonp": 7,
-        "./polling-xhr": 8,
-        "./websocket": 10,
-        xmlhttprequest: 11
-    } ],
-    7: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var Polling = _dereq_("./polling");
-            var inherit = _dereq_("component-inherit");
-            module.exports = JSONPPolling;
-            var rNewline = /\n/g;
-            var rEscapedNewline = /\\n/g;
-            var callbacks;
-            var index = 0;
-            function empty() {}
-            function JSONPPolling(opts) {
-                Polling.call(this, opts);
-                this.query = this.query || {};
-                if (!callbacks) {
-                    if (!global.___eio) global.___eio = [];
-                    callbacks = global.___eio;
-                }
-                this.index = callbacks.length;
-                var self = this;
-                callbacks.push(function(msg) {
-                    self.onData(msg);
-                });
-                this.query.j = this.index;
-                if (global.document && global.addEventListener) {
-                    global.addEventListener("beforeunload", function() {
-                        if (self.script) self.script.onerror = empty;
-                    });
-                }
-            }
-            inherit(JSONPPolling, Polling);
-            JSONPPolling.prototype.supportsBinary = false;
-            JSONPPolling.prototype.doClose = function() {
-                if (this.script) {
-                    this.script.parentNode.removeChild(this.script);
-                    this.script = null;
-                }
-                if (this.form) {
-                    this.form.parentNode.removeChild(this.form);
-                    this.form = null;
-                }
-                Polling.prototype.doClose.call(this);
-            };
-            JSONPPolling.prototype.doPoll = function() {
-                var self = this;
-                var script = document.createElement("script");
-                if (this.script) {
-                    this.script.parentNode.removeChild(this.script);
-                    this.script = null;
-                }
-                script.async = true;
-                script.src = this.uri();
-                script.onerror = function(e) {
-                    self.onError("jsonp poll error", e);
-                };
-                var insertAt = document.getElementsByTagName("script")[0];
-                insertAt.parentNode.insertBefore(script, insertAt);
-                this.script = script;
-                var isUAgecko = "undefined" != typeof navigator && /gecko/i.test(navigator.userAgent);
-                if (isUAgecko) {
-                    setTimeout(function() {
-                        var iframe = document.createElement("iframe");
-                        document.body.appendChild(iframe);
-                        document.body.removeChild(iframe);
-                    }, 100);
-                }
-            };
-            JSONPPolling.prototype.doWrite = function(data, fn) {
-                var self = this;
-                if (!this.form) {
-                    var form = document.createElement("form");
-                    var area = document.createElement("textarea");
-                    var id = this.iframeId = "eio_iframe_" + this.index;
-                    var iframe;
-                    form.className = "socketio";
-                    form.style.position = "absolute";
-                    form.style.top = "-1000px";
-                    form.style.left = "-1000px";
-                    form.target = id;
-                    form.method = "POST";
-                    form.setAttribute("accept-charset", "utf-8");
-                    area.name = "d";
-                    form.appendChild(area);
-                    document.body.appendChild(form);
-                    this.form = form;
-                    this.area = area;
-                }
-                this.form.action = this.uri();
-                function complete() {
-                    initIframe();
-                    fn();
-                }
-                function initIframe() {
-                    if (self.iframe) {
-                        try {
-                            self.form.removeChild(self.iframe);
-                        } catch (e) {
-                            self.onError("jsonp polling iframe removal error", e);
-                        }
-                    }
-                    try {
-                        var html = '<iframe src="javascript:0" name="' + self.iframeId + '">';
-                        iframe = document.createElement(html);
-                    } catch (e) {
-                        iframe = document.createElement("iframe");
-                        iframe.name = self.iframeId;
-                        iframe.src = "javascript:0";
-                    }
-                    iframe.id = self.iframeId;
-                    self.form.appendChild(iframe);
-                    self.iframe = iframe;
-                }
-                initIframe();
-                data = data.replace(rEscapedNewline, "\\\n");
-                this.area.value = data.replace(rNewline, "\\n");
-                try {
-                    this.form.submit();
-                } catch (e) {}
-                if (this.iframe.attachEvent) {
-                    this.iframe.onreadystatechange = function() {
-                        if (self.iframe.readyState == "complete") {
-                            complete();
-                        }
-                    };
-                } else {
-                    this.iframe.onload = complete;
-                }
-            };
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {
-        "./polling": 9,
-        "component-inherit": 13
-    } ],
-    8: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var XMLHttpRequest = _dereq_("xmlhttprequest");
-            var Polling = _dereq_("./polling");
-            var Emitter = _dereq_("component-emitter");
-            var inherit = _dereq_("component-inherit");
-            var debug = _dereq_("debug")("engine.io-client:polling-xhr");
-            module.exports = XHR;
-            module.exports.Request = Request;
-            function empty() {}
-            function XHR(opts) {
-                Polling.call(this, opts);
-                if (global.location) {
-                    var isSSL = "https:" == location.protocol;
-                    var port = location.port;
-                    if (!port) {
-                        port = isSSL ? 443 : 80;
-                    }
-                    this.xd = opts.hostname != global.location.hostname || port != opts.port;
-                }
-            }
-            inherit(XHR, Polling);
-            XHR.prototype.supportsBinary = true;
-            XHR.prototype.request = function(opts) {
-                opts = opts || {};
-                opts.uri = this.uri();
-                opts.xd = this.xd;
-                opts.agent = this.agent || false;
-                opts.supportsBinary = this.supportsBinary;
-                return new Request(opts);
-            };
-            XHR.prototype.doWrite = function(data, fn) {
-                var isBinary = typeof data !== "string" && data !== undefined;
-                var req = this.request({
-                    method: "POST",
-                    data: data,
-                    isBinary: isBinary
-                });
-                var self = this;
-                req.on("success", fn);
-                req.on("error", function(err) {
-                    self.onError("xhr post error", err);
-                });
-                this.sendXhr = req;
-            };
-            XHR.prototype.doPoll = function() {
-                debug("xhr poll");
-                var req = this.request();
-                var self = this;
-                req.on("data", function(data) {
-                    self.onData(data);
-                });
-                req.on("error", function(err) {
-                    self.onError("xhr poll error", err);
-                });
-                this.pollXhr = req;
-            };
-            function Request(opts) {
-                this.method = opts.method || "GET";
-                this.uri = opts.uri;
-                this.xd = !!opts.xd;
-                this.async = false !== opts.async;
-                this.data = undefined != opts.data ? opts.data : null;
-                this.agent = opts.agent;
-                this.create(opts.isBinary, opts.supportsBinary);
-            }
-            Emitter(Request.prototype);
-            Request.prototype.create = function(isBinary, supportsBinary) {
-                var xhr = this.xhr = new XMLHttpRequest({
-                    agent: this.agent,
-                    xdomain: this.xd
-                });
-                var self = this;
-                try {
-                    debug("xhr open %s: %s", this.method, this.uri);
-                    xhr.open(this.method, this.uri, this.async);
-                    if (supportsBinary) {
-                        xhr.responseType = "arraybuffer";
-                    }
-                    if ("POST" == this.method) {
-                        try {
-                            if (isBinary) {
-                                xhr.setRequestHeader("Content-type", "application/octet-stream");
-                            } else {
-                                xhr.setRequestHeader("Content-type", "text/plain;charset=UTF-8");
-                            }
-                        } catch (e) {}
-                    }
-                    if ("withCredentials" in xhr) {
-                        xhr.withCredentials = true;
-                    }
-                    xhr.onreadystatechange = function() {
-                        var data;
-                        try {
-                            if (4 != xhr.readyState) return;
-                            if (200 == xhr.status || 1223 == xhr.status) {
-                                var contentType = xhr.getResponseHeader("Content-Type");
-                                if (contentType === "application/octet-stream") {
-                                    data = xhr.response;
-                                } else {
-                                    if (!supportsBinary) {
-                                        data = xhr.responseText;
-                                    } else {
-                                        data = "ok";
-                                    }
-                                }
-                            } else {
-                                setTimeout(function() {
-                                    self.onError(xhr.status);
-                                }, 0);
-                            }
-                        } catch (e) {
-                            self.onError(e);
-                        }
-                        if (null != data) {
-                            self.onData(data);
-                        }
-                    };
-                    debug("xhr data %s", this.data);
-                    xhr.send(this.data);
-                } catch (e) {
-                    setTimeout(function() {
-                        self.onError(e);
-                    }, 0);
-                    return;
-                }
-                if (global.document) {
-                    this.index = Request.requestsCount++;
-                    Request.requests[this.index] = this;
-                }
-            };
-            Request.prototype.onSuccess = function() {
-                this.emit("success");
-                this.cleanup();
-            };
-            Request.prototype.onData = function(data) {
-                this.emit("data", data);
-                this.onSuccess();
-            };
-            Request.prototype.onError = function(err) {
-                this.emit("error", err);
-                this.cleanup();
-            };
-            Request.prototype.cleanup = function() {
-                if ("undefined" == typeof this.xhr || null === this.xhr) {
-                    return;
-                }
-                this.xhr.onreadystatechange = empty;
-                try {
-                    this.xhr.abort();
-                } catch (e) {}
-                if (global.document) {
-                    delete Request.requests[this.index];
-                }
-                this.xhr = null;
-            };
-            Request.prototype.abort = function() {
-                this.cleanup();
-            };
-            if (global.document) {
-                Request.requestsCount = 0;
-                Request.requests = {};
-                if (global.attachEvent) {
-                    global.attachEvent("onunload", unloadHandler);
-                } else if (global.addEventListener) {
-                    global.addEventListener("beforeunload", unloadHandler);
-                }
-            }
-            function unloadHandler() {
-                for (var i in Request.requests) {
-                    if (Request.requests.hasOwnProperty(i)) {
-                        Request.requests[i].abort();
-                    }
-                }
-            }
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {
-        "./polling": 9,
-        "component-emitter": 12,
-        "component-inherit": 13,
-        debug: 14,
-        xmlhttprequest: 11
-    } ],
-    9: [ function(_dereq_, module, exports) {
-        var Transport = _dereq_("../transport");
-        var parseqs = _dereq_("parseqs");
-        var parser = _dereq_("engine.io-parser");
-        var inherit = _dereq_("component-inherit");
-        var debug = _dereq_("debug")("engine.io-client:polling");
-        module.exports = Polling;
-        var hasXHR2 = function() {
-            var XMLHttpRequest = _dereq_("xmlhttprequest");
-            var xhr = new XMLHttpRequest({
-                agent: this.agent,
-                xdomain: false
-            });
-            return null != xhr.responseType;
-        }();
-        function Polling(opts) {
-            var forceBase64 = opts && opts.forceBase64;
-            if (!hasXHR2 || forceBase64) {
-                this.supportsBinary = false;
-            }
-            Transport.call(this, opts);
-        }
-        inherit(Polling, Transport);
-        Polling.prototype.name = "polling";
-        Polling.prototype.doOpen = function() {
-            this.poll();
-        };
-        Polling.prototype.pause = function(onPause) {
-            var pending = 0;
-            var self = this;
-            this.readyState = "pausing";
-            function pause() {
-                debug("paused");
-                self.readyState = "paused";
-                onPause();
-            }
-            if (this.polling || !this.writable) {
-                var total = 0;
-                if (this.polling) {
-                    debug("we are currently polling - waiting to pause");
-                    total++;
-                    this.once("pollComplete", function() {
-                        debug("pre-pause polling complete");
-                        --total || pause();
-                    });
-                }
-                if (!this.writable) {
-                    debug("we are currently writing - waiting to pause");
-                    total++;
-                    this.once("drain", function() {
-                        debug("pre-pause writing complete");
-                        --total || pause();
-                    });
-                }
-            } else {
-                pause();
-            }
-        };
-        Polling.prototype.poll = function() {
-            debug("polling");
-            this.polling = true;
-            this.doPoll();
-            this.emit("poll");
-        };
-        Polling.prototype.onData = function(data) {
-            var self = this;
-            debug("polling got data %s", data);
-            var callback = function(packet, index, total) {
-                if ("opening" == self.readyState) {
-                    self.onOpen();
-                }
-                if ("close" == packet.type) {
-                    self.onClose();
-                    return false;
-                }
-                self.onPacket(packet);
-            };
-            parser.decodePayload(data, this.socket.binaryType, callback);
-            if ("closed" != this.readyState) {
-                this.polling = false;
-                this.emit("pollComplete");
-                if ("open" == this.readyState) {
-                    this.poll();
-                } else {
-                    debug('ignoring poll - transport state "%s"', this.readyState);
-                }
-            }
-        };
-        Polling.prototype.doClose = function() {
-            var self = this;
-            function close() {
-                debug("writing close packet");
-                self.write([ {
-                    type: "close"
-                } ]);
-            }
-            if ("open" == this.readyState) {
-                debug("transport open - closing");
-                close();
-            } else {
-                debug("transport not open - deferring close");
-                this.once("open", close);
-            }
-        };
-        Polling.prototype.write = function(packets) {
-            var self = this;
-            this.writable = false;
-            var callbackfn = function() {
-                self.writable = true;
-                self.emit("drain");
-            };
-            var self = this;
-            parser.encodePayload(packets, this.supportsBinary, function(data) {
-                self.doWrite(data, callbackfn);
-            });
-        };
-        Polling.prototype.uri = function() {
-            var query = this.query || {};
-            var schema = this.secure ? "https" : "http";
-            var port = "";
-            if (false !== this.timestampRequests) {
-                query[this.timestampParam] = +new Date() + "-" + Transport.timestamps++;
-            }
-            if (!this.supportsBinary && !query.sid) {
-                query.b64 = 1;
-            }
-            query = parseqs.encode(query);
-            if (this.port && ("https" == schema && this.port != 443 || "http" == schema && this.port != 80)) {
-                port = ":" + this.port;
-            }
-            if (query.length) {
-                query = "?" + query;
-            }
-            return schema + "://" + this.hostname + port + this.path + query;
-        };
-    }, {
-        "../transport": 5,
-        "component-inherit": 13,
-        debug: 14,
-        "engine.io-parser": 15,
-        parseqs: 26,
-        xmlhttprequest: 11
-    } ],
-    10: [ function(_dereq_, module, exports) {
-        var Transport = _dereq_("../transport");
-        var parser = _dereq_("engine.io-parser");
-        var parseqs = _dereq_("parseqs");
-        var inherit = _dereq_("component-inherit");
-        var debug = _dereq_("debug")("engine.io-client:websocket");
-        var WebSocket = _dereq_("ws");
-        module.exports = WS;
-        function WS(opts) {
-            var forceBase64 = opts && opts.forceBase64;
-            if (forceBase64) {
-                this.supportsBinary = false;
-            }
-            Transport.call(this, opts);
-        }
-        inherit(WS, Transport);
-        WS.prototype.name = "websocket";
-        WS.prototype.supportsBinary = true;
-        WS.prototype.doOpen = function() {
-            if (!this.check()) {
-                return;
-            }
-            var self = this;
-            var uri = this.uri();
-            var protocols = void 0;
-            var opts = {
-                agent: this.agent
-            };
-            this.ws = new WebSocket(uri, protocols, opts);
-            if (this.ws.binaryType === undefined) {
-                this.supportsBinary = false;
-            }
-            this.ws.binaryType = "arraybuffer";
-            this.addEventListeners();
-        };
-        WS.prototype.addEventListeners = function() {
-            var self = this;
-            this.ws.onopen = function() {
-                self.onOpen();
-            };
-            this.ws.onclose = function() {
-                self.onClose();
-            };
-            this.ws.onmessage = function(ev) {
-                self.onData(ev.data);
-            };
-            this.ws.onerror = function(e) {
-                self.onError("websocket error", e);
-            };
-        };
-        if ("undefined" != typeof navigator && /iPad|iPhone|iPod/i.test(navigator.userAgent)) {
-            WS.prototype.onData = function(data) {
-                var self = this;
-                setTimeout(function() {
-                    Transport.prototype.onData.call(self, data);
-                }, 0);
-            };
-        }
-        WS.prototype.write = function(packets) {
-            var self = this;
-            this.writable = false;
-            for (var i = 0, l = packets.length; i < l; i++) {
-                parser.encodePacket(packets[i], this.supportsBinary, function(data) {
-                    try {
-                        self.ws.send(data);
-                    } catch (e) {
-                        debug("websocket closed before onclose event");
-                    }
-                });
-            }
-            function ondrain() {
-                self.writable = true;
-                self.emit("drain");
-            }
-            setTimeout(ondrain, 0);
-        };
-        WS.prototype.onClose = function() {
-            Transport.prototype.onClose.call(this);
-        };
-        WS.prototype.doClose = function() {
-            if (typeof this.ws !== "undefined") {
-                this.ws.close();
-            }
-        };
-        WS.prototype.uri = function() {
-            var query = this.query || {};
-            var schema = this.secure ? "wss" : "ws";
-            var port = "";
-            if (this.port && ("wss" == schema && this.port != 443 || "ws" == schema && this.port != 80)) {
-                port = ":" + this.port;
-            }
-            if (this.timestampRequests) {
-                query[this.timestampParam] = +new Date();
-            }
-            if (!this.supportsBinary) {
-                query.b64 = 1;
-            }
-            query = parseqs.encode(query);
-            if (query.length) {
-                query = "?" + query;
-            }
-            return schema + "://" + this.hostname + port + this.path + query;
-        };
-        WS.prototype.check = function() {
-            return !!WebSocket && !("__initialize" in WebSocket && this.name === WS.prototype.name);
-        };
-    }, {
-        "../transport": 5,
-        "component-inherit": 13,
-        debug: 14,
-        "engine.io-parser": 15,
-        parseqs: 26,
-        ws: 28
-    } ],
-    11: [ function(_dereq_, module, exports) {
-        var hasCORS = _dereq_("has-cors");
-        module.exports = function(opts) {
-            var xdomain = opts.xdomain;
+                iframe.onload = null;
+            } catch (x) {}
+            iframe.onerror = null;
+        }, cleanup = function() {
+            iframe && (unattach(), setTimeout(function() {
+                iframe && iframe.parentNode.removeChild(iframe), iframe = null;
+            }, 0), utils.unload_del(unload_ref));
+        }, onerror = function(r) {
+            iframe && (cleanup(), error_callback(r));
+        }, post = function(msg, origin) {
             try {
-                if ("undefined" != typeof XMLHttpRequest && (!xdomain || hasCORS)) {
-                    return new XMLHttpRequest();
-                }
-            } catch (e) {}
-            if (!xdomain) {
-                try {
-                    return new ActiveXObject("Microsoft.XMLHTTP");
-                } catch (e) {}
-            }
+                iframe && iframe.contentWindow && iframe.contentWindow.postMessage(msg, origin);
+            } catch (x) {}
         };
-    }, {
-        "has-cors": 22
-    } ],
-    12: [ function(_dereq_, module, exports) {
-        module.exports = Emitter;
-        function Emitter(obj) {
-            if (obj) return mixin(obj);
+        return iframe.src = iframe_url, iframe.style.display = "none", iframe.style.position = "absolute", 
+        iframe.onerror = function() {
+            onerror("onerror");
+        }, iframe.onload = function() {
+            clearTimeout(tref), tref = setTimeout(function() {
+                onerror("onload timeout");
+            }, 2e3);
+        }, _document.body.appendChild(iframe), tref = setTimeout(function() {
+            onerror("timeout");
+        }, 15e3), unload_ref = utils.unload_add(cleanup), {
+            post: post,
+            cleanup: cleanup,
+            loaded: unattach
+        };
+    }, utils.createHtmlfile = function(iframe_url, error_callback) {
+        var tref, unload_ref, iframe, doc = new ActiveXObject("htmlfile"), unattach = function() {
+            clearTimeout(tref);
+        }, cleanup = function() {
+            doc && (unattach(), utils.unload_del(unload_ref), iframe.parentNode.removeChild(iframe), 
+            iframe = doc = null, CollectGarbage());
+        }, onerror = function(r) {
+            doc && (cleanup(), error_callback(r));
+        }, post = function(msg, origin) {
+            try {
+                iframe && iframe.contentWindow && iframe.contentWindow.postMessage(msg, origin);
+            } catch (x) {}
+        };
+        doc.open(), doc.write('<html><script>document.domain="' + document.domain + '";</script></html>'), 
+        doc.close(), doc.parentWindow[WPrefix] = _window[WPrefix];
+        var c = doc.createElement("div");
+        return doc.body.appendChild(c), iframe = doc.createElement("iframe"), c.appendChild(iframe), 
+        iframe.src = iframe_url, tref = setTimeout(function() {
+            onerror("timeout");
+        }, 15e3), unload_ref = utils.unload_add(cleanup), {
+            post: post,
+            cleanup: cleanup,
+            loaded: unattach
+        };
+    };
+    var AbstractXHRObject = function() {};
+    AbstractXHRObject.prototype = new EventEmitter([ "chunk", "finish" ]), AbstractXHRObject.prototype._start = function(method, url, payload, opts) {
+        var that = this;
+        try {
+            that.xhr = new XMLHttpRequest();
+        } catch (x) {}
+        if (!that.xhr) try {
+            that.xhr = new _window.ActiveXObject("Microsoft.XMLHTTP");
+        } catch (x) {}
+        (_window.ActiveXObject || _window.XDomainRequest) && (url += (-1 === url.indexOf("?") ? "?" : "&") + "t=" + +new Date()), 
+        that.unload_ref = utils.unload_add(function() {
+            that._cleanup(!0);
+        });
+        try {
+            that.xhr.open(method, url, !0);
+        } catch (e) {
+            return that.emit("finish", 0, ""), void that._cleanup();
         }
-        function mixin(obj) {
-            for (var key in Emitter.prototype) {
-                obj[key] = Emitter.prototype[key];
-            }
-            return obj;
-        }
-        Emitter.prototype.on = Emitter.prototype.addEventListener = function(event, fn) {
-            this._callbacks = this._callbacks || {};
-            (this._callbacks[event] = this._callbacks[event] || []).push(fn);
-            return this;
-        };
-        Emitter.prototype.once = function(event, fn) {
-            var self = this;
-            this._callbacks = this._callbacks || {};
-            function on() {
-                self.off(event, on);
-                fn.apply(this, arguments);
-            }
-            on.fn = fn;
-            this.on(event, on);
-            return this;
-        };
-        Emitter.prototype.off = Emitter.prototype.removeListener = Emitter.prototype.removeAllListeners = Emitter.prototype.removeEventListener = function(event, fn) {
-            this._callbacks = this._callbacks || {};
-            if (0 == arguments.length) {
-                this._callbacks = {};
-                return this;
-            }
-            var callbacks = this._callbacks[event];
-            if (!callbacks) return this;
-            if (1 == arguments.length) {
-                delete this._callbacks[event];
-                return this;
-            }
-            var cb;
-            for (var i = 0; i < callbacks.length; i++) {
-                cb = callbacks[i];
-                if (cb === fn || cb.fn === fn) {
-                    callbacks.splice(i, 1);
+        if (opts && opts.no_credentials || (that.xhr.withCredentials = "true"), opts && opts.headers) for (var key in opts.headers) that.xhr.setRequestHeader(key, opts.headers[key]);
+        that.xhr.onreadystatechange = function() {
+            if (that.xhr) {
+                var x = that.xhr;
+                switch (x.readyState) {
+                  case 3:
+                    try {
+                        var status = x.status, text = x.responseText;
+                    } catch (x) {}
+                    1223 === status && (status = 204), text && text.length > 0 && that.emit("chunk", status, text);
                     break;
+
+                  case 4:
+                    var status = x.status;
+                    1223 === status && (status = 204), that.emit("finish", status, x.responseText), 
+                    that._cleanup(!1);
                 }
             }
-            return this;
-        };
-        Emitter.prototype.emit = function(event) {
-            this._callbacks = this._callbacks || {};
-            var args = [].slice.call(arguments, 1), callbacks = this._callbacks[event];
-            if (callbacks) {
-                callbacks = callbacks.slice(0);
-                for (var i = 0, len = callbacks.length; i < len; ++i) {
-                    callbacks[i].apply(this, args);
-                }
-            }
-            return this;
-        };
-        Emitter.prototype.listeners = function(event) {
-            this._callbacks = this._callbacks || {};
-            return this._callbacks[event] || [];
-        };
-        Emitter.prototype.hasListeners = function(event) {
-            return !!this.listeners(event).length;
-        };
-    }, {} ],
-    13: [ function(_dereq_, module, exports) {
-        module.exports = function(a, b) {
-            var fn = function() {};
-            fn.prototype = b.prototype;
-            a.prototype = new fn();
-            a.prototype.constructor = a;
-        };
-    }, {} ],
-    14: [ function(_dereq_, module, exports) {
-        module.exports = debug;
-        function debug(name) {
-            if (!debug.enabled(name)) return function() {};
-            return function(fmt) {
-                fmt = coerce(fmt);
-                var curr = new Date();
-                var ms = curr - (debug[name] || curr);
-                debug[name] = curr;
-                fmt = name + " " + fmt + " +" + debug.humanize(ms);
-                window.console && console.log && Function.prototype.apply.call(console.log, console, arguments);
-            };
+        }, that.xhr.send(payload);
+    }, AbstractXHRObject.prototype._cleanup = function(abort) {
+        var that = this;
+        if (that.xhr) {
+            if (utils.unload_del(that.unload_ref), that.xhr.onreadystatechange = function() {}, 
+            abort) try {
+                that.xhr.abort();
+            } catch (x) {}
+            that.unload_ref = that.xhr = null;
         }
-        debug.names = [];
-        debug.skips = [];
-        debug.enable = function(name) {
+    }, AbstractXHRObject.prototype.close = function() {
+        var that = this;
+        that.nuke(), that._cleanup(!0);
+    };
+    var XHRCorsObject = utils.XHRCorsObject = function() {
+        var that = this, args = arguments;
+        utils.delay(function() {
+            that._start.apply(that, args);
+        });
+    };
+    XHRCorsObject.prototype = new AbstractXHRObject();
+    var XHRLocalObject = utils.XHRLocalObject = function(method, url, payload) {
+        var that = this;
+        utils.delay(function() {
+            that._start(method, url, payload);
+        });
+    };
+    XHRLocalObject.prototype = new AbstractXHRObject();
+    var XDRObject = utils.XDRObject = function(method, url, payload) {
+        var that = this;
+        utils.delay(function() {
+            that._start(method, url, payload);
+        });
+    };
+    XDRObject.prototype = new EventEmitter([ "chunk", "finish" ]), XDRObject.prototype._start = function(method, url, payload) {
+        var that = this, xdr = new XDomainRequest();
+        url += (-1 === url.indexOf("?") ? "?" : "&") + "t=" + +new Date();
+        var onerror = xdr.ontimeout = xdr.onerror = function() {
+            that.emit("finish", 0, ""), that._cleanup(!1);
+        };
+        xdr.onprogress = function() {
+            that.emit("chunk", 200, xdr.responseText);
+        }, xdr.onload = function() {
+            that.emit("finish", 200, xdr.responseText), that._cleanup(!1);
+        }, that.xdr = xdr, that.unload_ref = utils.unload_add(function() {
+            that._cleanup(!0);
+        });
+        try {
+            that.xdr.open(method, url), that.xdr.send(payload);
+        } catch (x) {
+            onerror();
+        }
+    }, XDRObject.prototype._cleanup = function(abort) {
+        var that = this;
+        if (that.xdr) {
+            if (utils.unload_del(that.unload_ref), that.xdr.ontimeout = that.xdr.onerror = that.xdr.onprogress = that.xdr.onload = null, 
+            abort) try {
+                that.xdr.abort();
+            } catch (x) {}
+            that.unload_ref = that.xdr = null;
+        }
+    }, XDRObject.prototype.close = function() {
+        var that = this;
+        that.nuke(), that._cleanup(!0);
+    }, utils.isXHRCorsCapable = function() {
+        if (_document.domain) {
+            if (_window.XMLHttpRequest && "withCredentials" in new XMLHttpRequest()) return 1;
+            if (_window.XDomainRequest) return 2;
+        }
+        return IframeTransport.enabled() ? 3 : 4;
+    };
+    var SockJS = function(url, dep_protocols_whitelist, options) {
+        if (this === _window) return new SockJS(url, dep_protocols_whitelist, options);
+        var protocols_whitelist, that = this;
+        that._options = {
+            devel: !1,
+            debug: !1,
+            protocols_whitelist: [],
+            info: void 0,
+            rtt: void 0
+        }, options && utils.objectExtend(that._options, options), that._base_url = utils.amendUrl(url), 
+        that._server = that._options.server || utils.random_number_string(1e3), that._options.protocols_whitelist && that._options.protocols_whitelist.length ? protocols_whitelist = that._options.protocols_whitelist : (protocols_whitelist = "string" == typeof dep_protocols_whitelist && dep_protocols_whitelist.length > 0 ? [ dep_protocols_whitelist ] : utils.isArray(dep_protocols_whitelist) ? dep_protocols_whitelist : null, 
+        protocols_whitelist && that._debug('Deprecated API: Use "protocols_whitelist" option instead of supplying protocol list as a second parameter to SockJS constructor.')), 
+        that._protocols = [], that.protocol = null, that.readyState = SockJS.CONNECTING, 
+        that._ir = createInfoReceiver(that._base_url), that._ir.onfinish = function(info, rtt) {
+            that._ir = null, info ? (that._options.info && (info = utils.objectExtend(info, that._options.info)), 
+            that._options.rtt && (rtt = that._options.rtt), that._applyInfo(info, rtt, protocols_whitelist), 
+            that._didClose()) : that._didClose(1002, "Can't connect to server", !0);
+        };
+    };
+    SockJS.prototype = new REventTarget(), SockJS.version = "0.3.4", SockJS.CONNECTING = 0, 
+    SockJS.OPEN = 1, SockJS.CLOSING = 2, SockJS.CLOSED = 3, SockJS.prototype._debug = function() {
+        this._options.debug && utils.log.apply(utils, arguments);
+    }, SockJS.prototype._dispatchOpen = function() {
+        var that = this;
+        that.readyState === SockJS.CONNECTING ? (that._transport_tref && (clearTimeout(that._transport_tref), 
+        that._transport_tref = null), that.readyState = SockJS.OPEN, that.dispatchEvent(new SimpleEvent("open"))) : that._didClose(1006, "Server lost session");
+    }, SockJS.prototype._dispatchMessage = function(data) {
+        var that = this;
+        that.readyState === SockJS.OPEN && that.dispatchEvent(new SimpleEvent("message", {
+            data: data
+        }));
+    }, SockJS.prototype._dispatchHeartbeat = function() {
+        var that = this;
+        that.readyState === SockJS.OPEN && that.dispatchEvent(new SimpleEvent("heartbeat", {}));
+    }, SockJS.prototype._didClose = function(code, reason, force) {
+        var that = this;
+        if (that.readyState !== SockJS.CONNECTING && that.readyState !== SockJS.OPEN && that.readyState !== SockJS.CLOSING) throw new Error("INVALID_STATE_ERR");
+        that._ir && (that._ir.nuke(), that._ir = null), that._transport && (that._transport.doCleanup(), 
+        that._transport = null);
+        var close_event = new SimpleEvent("close", {
+            code: code,
+            reason: reason,
+            wasClean: utils.userSetCode(code)
+        });
+        if (!utils.userSetCode(code) && that.readyState === SockJS.CONNECTING && !force) {
+            if (that._try_next_protocol(close_event)) return;
+            close_event = new SimpleEvent("close", {
+                code: 2e3,
+                reason: "All transports failed",
+                wasClean: !1,
+                last_event: close_event
+            });
+        }
+        that.readyState = SockJS.CLOSED, utils.delay(function() {
+            that.dispatchEvent(close_event);
+        });
+    }, SockJS.prototype._didMessage = function(data) {
+        var that = this, type = data.slice(0, 1);
+        switch (type) {
+          case "o":
+            that._dispatchOpen();
+            break;
+
+          case "a":
+            for (var payload = JSON.parse(data.slice(1) || "[]"), i = 0; i < payload.length; i++) that._dispatchMessage(payload[i]);
+            break;
+
+          case "m":
+            var payload = JSON.parse(data.slice(1) || "null");
+            that._dispatchMessage(payload);
+            break;
+
+          case "c":
+            var payload = JSON.parse(data.slice(1) || "[]");
+            that._didClose(payload[0], payload[1]);
+            break;
+
+          case "h":
+            that._dispatchHeartbeat();
+        }
+    }, SockJS.prototype._try_next_protocol = function(close_event) {
+        var that = this;
+        for (that.protocol && (that._debug("Closed transport:", that.protocol, "" + close_event), 
+        that.protocol = null), that._transport_tref && (clearTimeout(that._transport_tref), 
+        that._transport_tref = null); ;) {
+            var protocol = that.protocol = that._protocols.shift();
+            if (!protocol) return !1;
+            if (SockJS[protocol] && SockJS[protocol].need_body === !0 && (!_document.body || "undefined" != typeof _document.readyState && "complete" !== _document.readyState)) return that._protocols.unshift(protocol), 
+            that.protocol = "waiting-for-load", utils.attachEvent("load", function() {
+                that._try_next_protocol();
+            }), !0;
+            if (SockJS[protocol] && SockJS[protocol].enabled(that._options)) {
+                var roundTrips = SockJS[protocol].roundTrips || 1, to = (that._options.rto || 0) * roundTrips || 5e3;
+                that._transport_tref = utils.delay(to, function() {
+                    that.readyState === SockJS.CONNECTING && that._didClose(2007, "Transport timeouted");
+                });
+                var connid = utils.random_string(8), trans_url = that._base_url + "/" + that._server + "/" + connid;
+                return that._debug("Opening transport:", protocol, " url:" + trans_url, " RTO:" + that._options.rto), 
+                that._transport = new SockJS[protocol](that, trans_url, that._base_url), !0;
+            }
+            that._debug("Skipping transport:", protocol);
+        }
+    }, SockJS.prototype.close = function(code, reason) {
+        var that = this;
+        if (code && !utils.userSetCode(code)) throw new Error("INVALID_ACCESS_ERR");
+        return that.readyState !== SockJS.CONNECTING && that.readyState !== SockJS.OPEN ? !1 : (that.readyState = SockJS.CLOSING, 
+        that._didClose(code || 1e3, reason || "Normal closure"), !0);
+    }, SockJS.prototype.send = function(data) {
+        var that = this;
+        if (that.readyState === SockJS.CONNECTING) throw new Error("INVALID_STATE_ERR");
+        return that.readyState === SockJS.OPEN && that._transport.doSend(utils.quote("" + data)), 
+        !0;
+    }, SockJS.prototype._applyInfo = function(info, rtt, protocols_whitelist) {
+        var that = this;
+        that._options.info = info, that._options.rtt = rtt, that._options.rto = utils.countRTO(rtt), 
+        that._options.info.null_origin = !_document.domain;
+        var probed = utils.probeProtocols();
+        that._protocols = utils.detectProtocols(probed, protocols_whitelist, info);
+    };
+    var WebSocketTransport = SockJS.websocket = function(ri, trans_url) {
+        var that = this, url = trans_url + "/websocket";
+        url = "https" === url.slice(0, 5) ? "wss" + url.slice(5) : "ws" + url.slice(4), 
+        that.ri = ri, that.url = url;
+        var Constructor = _window.WebSocket || _window.MozWebSocket;
+        that.ws = new Constructor(that.url), that.ws.onmessage = function(e) {
+            that.ri._didMessage(e.data);
+        }, that.ws.onerror = function() {
+            ri._didMessage(utils.closeFrame(1006, "WebSocket connection broken"));
+        }, that.unload_ref = utils.unload_add(function() {
+            that.ws.close();
+        }), that.ws.onclose = function() {
+            that.ri._didMessage(utils.closeFrame(1006, "WebSocket connection broken"));
+        };
+    };
+    WebSocketTransport.prototype.doSend = function(data) {
+        this.ws.send("[" + data + "]");
+    }, WebSocketTransport.prototype.doCleanup = function() {
+        var that = this, ws = that.ws;
+        ws && (ws.onmessage = ws.onclose = ws.onerror = null, ws.close(), utils.unload_del(that.unload_ref), 
+        that.unload_ref = that.ri = that.ws = null);
+    }, WebSocketTransport.enabled = function() {
+        return !(!_window.WebSocket && !_window.MozWebSocket);
+    }, WebSocketTransport.roundTrips = 2;
+    var BufferedSender = function() {};
+    BufferedSender.prototype.send_constructor = function(sender) {
+        var that = this;
+        that.send_buffer = [], that.sender = sender;
+    }, BufferedSender.prototype.doSend = function(message) {
+        var that = this;
+        that.send_buffer.push(message), that.send_stop || that.send_schedule();
+    }, BufferedSender.prototype.send_schedule_wait = function() {
+        var tref, that = this;
+        that.send_stop = function() {
+            that.send_stop = null, clearTimeout(tref);
+        }, tref = utils.delay(25, function() {
+            that.send_stop = null, that.send_schedule();
+        });
+    }, BufferedSender.prototype.send_schedule = function() {
+        var that = this;
+        if (that.send_buffer.length > 0) {
+            var payload = "[" + that.send_buffer.join(",") + "]";
+            that.send_stop = that.sender(that.trans_url, payload, function(success, abort_reason) {
+                that.send_stop = null, success === !1 ? that.ri._didClose(1006, "Sending error " + abort_reason) : that.send_schedule_wait();
+            }), that.send_buffer = [];
+        }
+    }, BufferedSender.prototype.send_destructor = function() {
+        var that = this;
+        that._send_stop && that._send_stop(), that._send_stop = null;
+    };
+    var jsonPGenericSender = function(url, payload, callback) {
+        var that = this;
+        if (!("_send_form" in that)) {
+            var form = that._send_form = _document.createElement("form"), area = that._send_area = _document.createElement("textarea");
+            area.name = "d", form.style.display = "none", form.style.position = "absolute", 
+            form.method = "POST", form.enctype = "application/x-www-form-urlencoded", form.acceptCharset = "UTF-8", 
+            form.appendChild(area), _document.body.appendChild(form);
+        }
+        var form = that._send_form, area = that._send_area, id = "a" + utils.random_string(8);
+        form.target = id, form.action = url + "/jsonp_send?i=" + id;
+        var iframe;
+        try {
+            iframe = _document.createElement('<iframe name="' + id + '">');
+        } catch (x) {
+            iframe = _document.createElement("iframe"), iframe.name = id;
+        }
+        iframe.id = id, form.appendChild(iframe), iframe.style.display = "none";
+        try {
+            area.value = payload;
+        } catch (e) {
+            utils.log("Your browser is seriously broken. Go home! " + e.message);
+        }
+        form.submit();
+        var completed = function() {
+            iframe.onerror && (iframe.onreadystatechange = iframe.onerror = iframe.onload = null, 
+            utils.delay(500, function() {
+                iframe.parentNode.removeChild(iframe), iframe = null;
+            }), area.value = "", callback(!0));
+        };
+        return iframe.onerror = iframe.onload = completed, iframe.onreadystatechange = function() {
+            "complete" == iframe.readyState && completed();
+        }, completed;
+    }, createAjaxSender = function(AjaxObject) {
+        return function(url, payload, callback) {
+            var xo = new AjaxObject("POST", url + "/xhr_send", payload);
+            return xo.onfinish = function(status) {
+                callback(200 === status || 204 === status, "http status " + status);
+            }, function(abort_reason) {
+                callback(!1, abort_reason);
+            };
+        };
+    }, jsonPGenericReceiver = function(url, callback) {
+        var tref, script2, script = _document.createElement("script"), close_script = function(frame) {
+            script2 && (script2.parentNode.removeChild(script2), script2 = null), script && (clearTimeout(tref), 
+            script.parentNode.removeChild(script), script.onreadystatechange = script.onerror = script.onload = script.onclick = null, 
+            script = null, callback(frame), callback = null);
+        }, loaded_okay = !1, error_timer = null;
+        if (script.id = "a" + utils.random_string(8), script.src = url, script.type = "text/javascript", 
+        script.charset = "UTF-8", script.onerror = function() {
+            error_timer || (error_timer = setTimeout(function() {
+                loaded_okay || close_script(utils.closeFrame(1006, "JSONP script loaded abnormally (onerror)"));
+            }, 1e3));
+        }, script.onload = function() {
+            close_script(utils.closeFrame(1006, "JSONP script loaded abnormally (onload)"));
+        }, script.onreadystatechange = function() {
+            if (/loaded|closed/.test(script.readyState)) {
+                if (script && script.htmlFor && script.onclick) {
+                    loaded_okay = !0;
+                    try {
+                        script.onclick();
+                    } catch (x) {}
+                }
+                script && close_script(utils.closeFrame(1006, "JSONP script loaded abnormally (onreadystatechange)"));
+            }
+        }, "undefined" == typeof script.async && _document.attachEvent) if (/opera/i.test(navigator.userAgent)) script2 = _document.createElement("script"), 
+        script2.text = "try{var a = document.getElementById('" + script.id + "'); if(a)a.onerror();}catch(x){};", 
+        script.async = script2.async = !1; else {
             try {
-                localStorage.debug = name;
-            } catch (e) {}
-            var split = (name || "").split(/[\s,]+/), len = split.length;
-            for (var i = 0; i < len; i++) {
-                name = split[i].replace("*", ".*?");
-                if (name[0] === "-") {
-                    debug.skips.push(new RegExp("^" + name.substr(1) + "$"));
-                } else {
-                    debug.names.push(new RegExp("^" + name + "$"));
-                }
-            }
-        };
-        debug.disable = function() {
-            debug.enable("");
-        };
-        debug.humanize = function(ms) {
-            var sec = 1e3, min = 60 * 1e3, hour = 60 * min;
-            if (ms >= hour) return (ms / hour).toFixed(1) + "h";
-            if (ms >= min) return (ms / min).toFixed(1) + "m";
-            if (ms >= sec) return (ms / sec | 0) + "s";
-            return ms + "ms";
-        };
-        debug.enabled = function(name) {
-            for (var i = 0, len = debug.skips.length; i < len; i++) {
-                if (debug.skips[i].test(name)) {
-                    return false;
-                }
-            }
-            for (var i = 0, len = debug.names.length; i < len; i++) {
-                if (debug.names[i].test(name)) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        function coerce(val) {
-            if (val instanceof Error) return val.stack || val.message;
-            return val;
+                script.htmlFor = script.id, script.event = "onclick";
+            } catch (x) {}
+            script.async = !0;
         }
-        try {
-            if (window.localStorage) debug.enable(localStorage.debug);
-        } catch (e) {}
-    }, {} ],
-    15: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var keys = _dereq_("./keys");
-            var sliceBuffer = _dereq_("arraybuffer.slice");
-            var base64encoder = _dereq_("base64-arraybuffer");
-            var after = _dereq_("after");
-            var utf8 = _dereq_("utf8");
-            var isAndroid = navigator.userAgent.match(/Android/i);
-            exports.protocol = 2;
-            var packets = exports.packets = {
-                open: 0,
-                close: 1,
-                ping: 2,
-                pong: 3,
-                message: 4,
-                upgrade: 5,
-                noop: 6
-            };
-            var packetslist = keys(packets);
-            var err = {
-                type: "error",
-                data: "parser error"
-            };
-            var Blob = _dereq_("blob");
-            exports.encodePacket = function(packet, supportsBinary, callback) {
-                if (typeof supportsBinary == "function") {
-                    callback = supportsBinary;
-                    supportsBinary = false;
-                }
-                var data = packet.data === undefined ? undefined : packet.data.buffer || packet.data;
-                if (global.ArrayBuffer && data instanceof ArrayBuffer) {
-                    return encodeArrayBuffer(packet, supportsBinary, callback);
-                } else if (Blob && data instanceof global.Blob) {
-                    return encodeBlob(packet, supportsBinary, callback);
-                }
-                var encoded = packets[packet.type];
-                if (undefined !== packet.data) {
-                    encoded += utf8.encode(String(packet.data));
-                }
-                return callback("" + encoded);
-            };
-            function encodeArrayBuffer(packet, supportsBinary, callback) {
-                if (!supportsBinary) {
-                    return exports.encodeBase64Packet(packet, callback);
-                }
-                var data = packet.data;
-                var contentArray = new Uint8Array(data);
-                var resultBuffer = new Uint8Array(1 + data.byteLength);
-                resultBuffer[0] = packets[packet.type];
-                for (var i = 0; i < contentArray.length; i++) {
-                    resultBuffer[i + 1] = contentArray[i];
-                }
-                return callback(resultBuffer.buffer);
+        "undefined" != typeof script.async && (script.async = !0), tref = setTimeout(function() {
+            close_script(utils.closeFrame(1006, "JSONP script loaded abnormally (timeout)"));
+        }, 35e3);
+        var head = _document.getElementsByTagName("head")[0];
+        return head.insertBefore(script, head.firstChild), script2 && head.insertBefore(script2, head.firstChild), 
+        close_script;
+    }, JsonPTransport = SockJS["jsonp-polling"] = function(ri, trans_url) {
+        utils.polluteGlobalNamespace();
+        var that = this;
+        that.ri = ri, that.trans_url = trans_url, that.send_constructor(jsonPGenericSender), 
+        that._schedule_recv();
+    };
+    JsonPTransport.prototype = new BufferedSender(), JsonPTransport.prototype._schedule_recv = function() {
+        var that = this, callback = function(data) {
+            that._recv_stop = null, data && (that._is_closing || that.ri._didMessage(data)), 
+            that._is_closing || that._schedule_recv();
+        };
+        that._recv_stop = jsonPReceiverWrapper(that.trans_url + "/jsonp", jsonPGenericReceiver, callback);
+    }, JsonPTransport.enabled = function() {
+        return !0;
+    }, JsonPTransport.need_body = !0, JsonPTransport.prototype.doCleanup = function() {
+        var that = this;
+        that._is_closing = !0, that._recv_stop && that._recv_stop(), that.ri = that._recv_stop = null, 
+        that.send_destructor();
+    };
+    var jsonPReceiverWrapper = function(url, constructReceiver, user_callback) {
+        var id = "a" + utils.random_string(6), url_id = url + "?c=" + escape(WPrefix + "." + id), aborting = 0, callback = function(frame) {
+            switch (aborting) {
+              case 0:
+                delete _window[WPrefix][id], user_callback(frame);
+                break;
+
+              case 1:
+                user_callback(frame), aborting = 2;
+                break;
+
+              case 2:
+                delete _window[WPrefix][id];
             }
-            function encodeBlobAsArrayBuffer(packet, supportsBinary, callback) {
-                if (!supportsBinary) {
-                    return exports.encodeBase64Packet(packet, callback);
-                }
-                var fr = new FileReader();
-                fr.onload = function() {
-                    packet.data = fr.result;
-                    exports.encodePacket(packet, supportsBinary, callback);
-                };
-                return fr.readAsArrayBuffer(packet.data);
+        }, close_script = constructReceiver(url_id, callback);
+        _window[WPrefix][id] = close_script;
+        var stop = function() {
+            _window[WPrefix][id] && (aborting = 1, _window[WPrefix][id](utils.closeFrame(1e3, "JSONP user aborted read")));
+        };
+        return stop;
+    }, AjaxBasedTransport = function() {};
+    AjaxBasedTransport.prototype = new BufferedSender(), AjaxBasedTransport.prototype.run = function(ri, trans_url, url_suffix, Receiver, AjaxObject) {
+        var that = this;
+        that.ri = ri, that.trans_url = trans_url, that.send_constructor(createAjaxSender(AjaxObject)), 
+        that.poll = new Polling(ri, Receiver, trans_url + url_suffix, AjaxObject);
+    }, AjaxBasedTransport.prototype.doCleanup = function() {
+        var that = this;
+        that.poll && (that.poll.abort(), that.poll = null);
+    };
+    var XhrStreamingTransport = SockJS["xhr-streaming"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/xhr_streaming", XhrReceiver, utils.XHRCorsObject);
+    };
+    XhrStreamingTransport.prototype = new AjaxBasedTransport(), XhrStreamingTransport.enabled = function() {
+        return _window.XMLHttpRequest && "withCredentials" in new XMLHttpRequest() && !/opera/i.test(navigator.userAgent);
+    }, XhrStreamingTransport.roundTrips = 2, XhrStreamingTransport.need_body = !0;
+    var XdrStreamingTransport = SockJS["xdr-streaming"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/xhr_streaming", XhrReceiver, utils.XDRObject);
+    };
+    XdrStreamingTransport.prototype = new AjaxBasedTransport(), XdrStreamingTransport.enabled = function() {
+        return !!_window.XDomainRequest;
+    }, XdrStreamingTransport.roundTrips = 2;
+    var XhrPollingTransport = SockJS["xhr-polling"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/xhr", XhrReceiver, utils.XHRCorsObject);
+    };
+    XhrPollingTransport.prototype = new AjaxBasedTransport(), XhrPollingTransport.enabled = XhrStreamingTransport.enabled, 
+    XhrPollingTransport.roundTrips = 2;
+    var XdrPollingTransport = SockJS["xdr-polling"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/xhr", XhrReceiver, utils.XDRObject);
+    };
+    XdrPollingTransport.prototype = new AjaxBasedTransport(), XdrPollingTransport.enabled = XdrStreamingTransport.enabled, 
+    XdrPollingTransport.roundTrips = 2;
+    var IframeTransport = function() {};
+    IframeTransport.prototype.i_constructor = function(ri, trans_url, base_url) {
+        var that = this;
+        that.ri = ri, that.origin = utils.getOrigin(base_url), that.base_url = base_url, 
+        that.trans_url = trans_url;
+        var iframe_url = base_url + "/iframe.html";
+        that.ri._options.devel && (iframe_url += "?t=" + +new Date()), that.window_id = utils.random_string(8), 
+        iframe_url += "#" + that.window_id, that.iframeObj = utils.createIframe(iframe_url, function(r) {
+            that.ri._didClose(1006, "Unable to load an iframe (" + r + ")");
+        }), that.onmessage_cb = utils.bind(that.onmessage, that), utils.attachMessage(that.onmessage_cb);
+    }, IframeTransport.prototype.doCleanup = function() {
+        var that = this;
+        if (that.iframeObj) {
+            utils.detachMessage(that.onmessage_cb);
+            try {
+                that.iframeObj.iframe.contentWindow && that.postMessage("c");
+            } catch (x) {}
+            that.iframeObj.cleanup(), that.iframeObj = null, that.onmessage_cb = that.iframeObj = null;
+        }
+    }, IframeTransport.prototype.onmessage = function(e) {
+        var that = this;
+        if (utils.isSameOriginUrl(e.origin, that.origin)) {
+            var window_id = e.data.slice(0, 8), type = e.data.slice(8, 9), data = e.data.slice(9);
+            if (window_id === that.window_id) switch (type) {
+              case "s":
+                that.iframeObj.loaded(), that.postMessage("s", JSON.stringify([ SockJS.version, that.protocol, that.trans_url, that.base_url ]));
+                break;
+
+              case "t":
+                that.ri._didMessage(data);
             }
-            function encodeBlob(packet, supportsBinary, callback) {
-                if (!supportsBinary) {
-                    return exports.encodeBase64Packet(packet, callback);
+        }
+    }, IframeTransport.prototype.postMessage = function(type, data) {
+        var that = this;
+        that.iframeObj.post(that.window_id + type + (data || ""), that.origin);
+    }, IframeTransport.prototype.doSend = function(message) {
+        this.postMessage("m", message);
+    }, IframeTransport.enabled = function() {
+        var konqueror = navigator && navigator.userAgent && -1 !== navigator.userAgent.indexOf("Konqueror");
+        return ("function" == typeof _window.postMessage || "object" == typeof _window.postMessage) && !konqueror;
+    };
+    var curr_window_id, postMessage = function(type, data) {
+        parent !== _window ? parent.postMessage(curr_window_id + type + (data || ""), "*") : utils.log("Can't postMessage, no parent window.", type, data);
+    }, FacadeJS = function() {};
+    FacadeJS.prototype._didClose = function(code, reason) {
+        postMessage("t", utils.closeFrame(code, reason));
+    }, FacadeJS.prototype._didMessage = function(frame) {
+        postMessage("t", frame);
+    }, FacadeJS.prototype._doSend = function(data) {
+        this._transport.doSend(data);
+    }, FacadeJS.prototype._doCleanup = function() {
+        this._transport.doCleanup();
+    }, utils.parent_origin = void 0, SockJS.bootstrap_iframe = function() {
+        var facade;
+        curr_window_id = _document.location.hash.slice(1);
+        var onMessage = function(e) {
+            if (e.source === parent && ("undefined" == typeof utils.parent_origin && (utils.parent_origin = e.origin), 
+            e.origin === utils.parent_origin)) {
+                var window_id = e.data.slice(0, 8), type = e.data.slice(8, 9), data = e.data.slice(9);
+                if (window_id === curr_window_id) switch (type) {
+                  case "s":
+                    var p = JSON.parse(data), version = p[0], protocol = p[1], trans_url = p[2], base_url = p[3];
+                    if (version !== SockJS.version && utils.log('Incompatibile SockJS! Main site uses: "' + version + '", the iframe: "' + SockJS.version + '".'), 
+                    !utils.flatUrl(trans_url) || !utils.flatUrl(base_url)) return void utils.log("Only basic urls are supported in SockJS");
+                    if (!utils.isSameOriginUrl(trans_url) || !utils.isSameOriginUrl(base_url)) return void utils.log("Can't connect to different domain from within an iframe. (" + JSON.stringify([ _window.location.href, trans_url, base_url ]) + ")");
+                    facade = new FacadeJS(), facade._transport = new FacadeJS[protocol](facade, trans_url, base_url);
+                    break;
+
+                  case "m":
+                    facade._doSend(data);
+                    break;
+
+                  case "c":
+                    facade && facade._doCleanup(), facade = null;
                 }
-                if (isAndroid) {
-                    return encodeBlobAsArrayBuffer(packet, supportsBinary, callback);
-                }
-                var length = new Uint8Array(1);
-                length[0] = packets[packet.type];
-                var blob = new Blob([ length.buffer, packet.data ]);
-                return callback(blob);
             }
-            exports.encodeBase64Packet = function(packet, callback) {
-                var message = "b" + exports.packets[packet.type];
-                if (Blob && packet.data instanceof Blob) {
-                    var fr = new FileReader();
-                    fr.onload = function() {
-                        var b64 = fr.result.split(",")[1];
-                        callback(message + b64);
-                    };
-                    return fr.readAsDataURL(packet.data);
-                }
-                var b64data;
-                try {
-                    b64data = String.fromCharCode.apply(null, new Uint8Array(packet.data));
-                } catch (e) {
-                    var typed = new Uint8Array(packet.data);
-                    var basic = new Array(typed.length);
-                    for (var i = 0; i < typed.length; i++) {
-                        basic[i] = typed[i];
-                    }
-                    b64data = String.fromCharCode.apply(null, basic);
-                }
-                message += global.btoa(b64data);
-                return callback(message);
+        };
+        utils.attachMessage(onMessage), postMessage("s");
+    };
+    var InfoReceiver = function(base_url, AjaxObject) {
+        var that = this;
+        utils.delay(function() {
+            that.doXhr(base_url, AjaxObject);
+        });
+    };
+    InfoReceiver.prototype = new EventEmitter([ "finish" ]), InfoReceiver.prototype.doXhr = function(base_url, AjaxObject) {
+        var that = this, t0 = new Date().getTime(), xo = new AjaxObject("GET", base_url + "/info"), tref = utils.delay(8e3, function() {
+            xo.ontimeout();
+        });
+        xo.onfinish = function(status, text) {
+            if (clearTimeout(tref), tref = null, 200 === status) {
+                var rtt = new Date().getTime() - t0, info = JSON.parse(text);
+                "object" != typeof info && (info = {}), that.emit("finish", info, rtt);
+            } else that.emit("finish");
+        }, xo.ontimeout = function() {
+            xo.close(), that.emit("finish");
+        };
+    };
+    var InfoReceiverIframe = function(base_url) {
+        var that = this, go = function() {
+            var ifr = new IframeTransport();
+            ifr.protocol = "w-iframe-info-receiver";
+            var fun = function(r) {
+                if ("string" == typeof r && "m" === r.substr(0, 1)) {
+                    var d = JSON.parse(r.substr(1)), info = d[0], rtt = d[1];
+                    that.emit("finish", info, rtt);
+                } else that.emit("finish");
+                ifr.doCleanup(), ifr = null;
+            }, mock_ri = {
+                _options: {},
+                _didClose: fun,
+                _didMessage: fun
             };
-            exports.decodePacket = function(data, binaryType) {
-                if (typeof data == "string" || data === undefined) {
-                    if (data.charAt(0) == "b") {
-                        return exports.decodeBase64Packet(data.substr(1), binaryType);
-                    }
-                    data = utf8.decode(data);
-                    var type = data.charAt(0);
-                    if (Number(type) != type || !packetslist[type]) {
-                        return err;
-                    }
-                    if (data.length > 1) {
-                        return {
-                            type: packetslist[type],
-                            data: data.substring(1)
-                        };
-                    } else {
-                        return {
-                            type: packetslist[type]
-                        };
-                    }
-                }
-                var asArray = new Uint8Array(data);
-                var type = asArray[0];
-                var rest = sliceBuffer(data, 1);
-                if (Blob && binaryType === "blob") {
-                    rest = new Blob([ rest ]);
-                }
-                return {
-                    type: packetslist[type],
-                    data: rest
-                };
-            };
-            exports.decodeBase64Packet = function(msg, binaryType) {
-                var type = packetslist[msg.charAt(0)];
-                if (!global.ArrayBuffer) {
-                    return {
-                        type: type,
-                        data: {
-                            base64: true,
-                            data: msg.substr(1)
-                        }
-                    };
-                }
-                var data = base64encoder.decode(msg.substr(1));
-                if (binaryType === "blob" && Blob) {
-                    data = new Blob([ data ]);
-                }
-                return {
-                    type: type,
+            ifr.i_constructor(mock_ri, base_url, base_url);
+        };
+        _document.body ? go() : utils.attachEvent("load", go);
+    };
+    InfoReceiverIframe.prototype = new EventEmitter([ "finish" ]);
+    var InfoReceiverFake = function() {
+        var that = this;
+        utils.delay(function() {
+            that.emit("finish", {}, 2e3);
+        });
+    };
+    InfoReceiverFake.prototype = new EventEmitter([ "finish" ]);
+    var createInfoReceiver = function(base_url) {
+        if (utils.isSameOriginUrl(base_url)) return new InfoReceiver(base_url, utils.XHRLocalObject);
+        switch (utils.isXHRCorsCapable()) {
+          case 1:
+            return new InfoReceiver(base_url, utils.XHRLocalObject);
+
+          case 2:
+            return new InfoReceiver(base_url, utils.XDRObject);
+
+          case 3:
+            return new InfoReceiverIframe(base_url);
+
+          default:
+            return new InfoReceiverFake();
+        }
+    }, WInfoReceiverIframe = FacadeJS["w-iframe-info-receiver"] = function(ri, _trans_url, base_url) {
+        var ir = new InfoReceiver(base_url, utils.XHRLocalObject);
+        ir.onfinish = function(info, rtt) {
+            ri._didMessage("m" + JSON.stringify([ info, rtt ])), ri._didClose();
+        };
+    };
+    WInfoReceiverIframe.prototype.doCleanup = function() {};
+    var EventSourceIframeTransport = SockJS["iframe-eventsource"] = function() {
+        var that = this;
+        that.protocol = "w-iframe-eventsource", that.i_constructor.apply(that, arguments);
+    };
+    EventSourceIframeTransport.prototype = new IframeTransport(), EventSourceIframeTransport.enabled = function() {
+        return "EventSource" in _window && IframeTransport.enabled();
+    }, EventSourceIframeTransport.need_body = !0, EventSourceIframeTransport.roundTrips = 3;
+    var EventSourceTransport = FacadeJS["w-iframe-eventsource"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/eventsource", EventSourceReceiver, utils.XHRLocalObject);
+    };
+    EventSourceTransport.prototype = new AjaxBasedTransport();
+    var XhrPollingIframeTransport = SockJS["iframe-xhr-polling"] = function() {
+        var that = this;
+        that.protocol = "w-iframe-xhr-polling", that.i_constructor.apply(that, arguments);
+    };
+    XhrPollingIframeTransport.prototype = new IframeTransport(), XhrPollingIframeTransport.enabled = function() {
+        return _window.XMLHttpRequest && IframeTransport.enabled();
+    }, XhrPollingIframeTransport.need_body = !0, XhrPollingIframeTransport.roundTrips = 3;
+    var XhrPollingITransport = FacadeJS["w-iframe-xhr-polling"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/xhr", XhrReceiver, utils.XHRLocalObject);
+    };
+    XhrPollingITransport.prototype = new AjaxBasedTransport();
+    var HtmlFileIframeTransport = SockJS["iframe-htmlfile"] = function() {
+        var that = this;
+        that.protocol = "w-iframe-htmlfile", that.i_constructor.apply(that, arguments);
+    };
+    HtmlFileIframeTransport.prototype = new IframeTransport(), HtmlFileIframeTransport.enabled = function() {
+        return IframeTransport.enabled();
+    }, HtmlFileIframeTransport.need_body = !0, HtmlFileIframeTransport.roundTrips = 3;
+    var HtmlFileTransport = FacadeJS["w-iframe-htmlfile"] = function(ri, trans_url) {
+        this.run(ri, trans_url, "/htmlfile", HtmlfileReceiver, utils.XHRLocalObject);
+    };
+    HtmlFileTransport.prototype = new AjaxBasedTransport();
+    var Polling = function(ri, Receiver, recv_url, AjaxObject) {
+        var that = this;
+        that.ri = ri, that.Receiver = Receiver, that.recv_url = recv_url, that.AjaxObject = AjaxObject, 
+        that._scheduleRecv();
+    };
+    Polling.prototype._scheduleRecv = function() {
+        var that = this, poll = that.poll = new that.Receiver(that.recv_url, that.AjaxObject), msg_counter = 0;
+        poll.onmessage = function(e) {
+            msg_counter += 1, that.ri._didMessage(e.data);
+        }, poll.onclose = function(e) {
+            that.poll = poll = poll.onmessage = poll.onclose = null, that.poll_is_closing || ("permanent" === e.reason ? that.ri._didClose(1006, "Polling error (" + e.reason + ")") : that._scheduleRecv());
+        };
+    }, Polling.prototype.abort = function() {
+        var that = this;
+        that.poll_is_closing = !0, that.poll && that.poll.abort();
+    };
+    var EventSourceReceiver = function(url) {
+        var that = this, es = new EventSource(url);
+        es.onmessage = function(e) {
+            that.dispatchEvent(new SimpleEvent("message", {
+                data: unescape(e.data)
+            }));
+        }, that.es_close = es.onerror = function(e, abort_reason) {
+            var reason = abort_reason ? "user" : 2 !== es.readyState ? "network" : "permanent";
+            that.es_close = es.onmessage = es.onerror = null, es.close(), es = null, utils.delay(200, function() {
+                that.dispatchEvent(new SimpleEvent("close", {
+                    reason: reason
+                }));
+            });
+        };
+    };
+    EventSourceReceiver.prototype = new REventTarget(), EventSourceReceiver.prototype.abort = function() {
+        var that = this;
+        that.es_close && that.es_close({}, !0);
+    };
+    var _is_ie_htmlfile_capable, isIeHtmlfileCapable = function() {
+        if (void 0 === _is_ie_htmlfile_capable) if ("ActiveXObject" in _window) try {
+            _is_ie_htmlfile_capable = !!new ActiveXObject("htmlfile");
+        } catch (x) {} else _is_ie_htmlfile_capable = !1;
+        return _is_ie_htmlfile_capable;
+    }, HtmlfileReceiver = function(url) {
+        var that = this;
+        utils.polluteGlobalNamespace(), that.id = "a" + utils.random_string(6, 26), url += (-1 === url.indexOf("?") ? "?" : "&") + "c=" + escape(WPrefix + "." + that.id);
+        var iframeObj, constructor = isIeHtmlfileCapable() ? utils.createHtmlfile : utils.createIframe;
+        _window[WPrefix][that.id] = {
+            start: function() {
+                iframeObj.loaded();
+            },
+            message: function(data) {
+                that.dispatchEvent(new SimpleEvent("message", {
                     data: data
-                };
-            };
-            exports.encodePayload = function(packets, supportsBinary, callback) {
-                if (typeof supportsBinary == "function") {
-                    callback = supportsBinary;
-                    supportsBinary = null;
-                }
-                if (supportsBinary) {
-                    if (Blob && !isAndroid) {
-                        return exports.encodePayloadAsBlob(packets, callback);
-                    }
-                    return exports.encodePayloadAsArrayBuffer(packets, callback);
-                }
-                if (!packets.length) {
-                    return callback("0:");
-                }
-                function setLengthHeader(message) {
-                    return message.length + ":" + message;
-                }
-                function encodeOne(packet, doneCallback) {
-                    exports.encodePacket(packet, supportsBinary, function(message) {
-                        doneCallback(null, setLengthHeader(message));
-                    });
-                }
-                map(packets, encodeOne, function(err, results) {
-                    return callback(results.join(""));
-                });
-            };
-            function map(ary, each, done) {
-                var result = new Array(ary.length);
-                var next = after(ary.length, done);
-                var eachWithIndex = function(i, el, cb) {
-                    each(el, function(error, msg) {
-                        result[i] = msg;
-                        cb(error, result);
-                    });
-                };
-                for (var i = 0; i < ary.length; i++) {
-                    eachWithIndex(i, ary[i], next);
-                }
+                }));
+            },
+            stop: function() {
+                that.iframe_close({}, "network");
             }
-            exports.decodePayload = function(data, binaryType, callback) {
-                if (typeof data != "string") {
-                    return exports.decodePayloadAsBinary(data, binaryType, callback);
-                }
-                if (typeof binaryType === "function") {
-                    callback = binaryType;
-                    binaryType = null;
-                }
-                var packet;
-                if (data == "") {
-                    return callback(err, 0, 1);
-                }
-                var length = "", n, msg;
-                for (var i = 0, l = data.length; i < l; i++) {
-                    var chr = data.charAt(i);
-                    if (":" != chr) {
-                        length += chr;
-                    } else {
-                        if ("" == length || length != (n = Number(length))) {
-                            return callback(err, 0, 1);
-                        }
-                        msg = data.substr(i + 1, n);
-                        if (length != msg.length) {
-                            return callback(err, 0, 1);
-                        }
-                        if (msg.length) {
-                            packet = exports.decodePacket(msg, binaryType);
-                            if (err.type == packet.type && err.data == packet.data) {
-                                return callback(err, 0, 1);
-                            }
-                            var ret = callback(packet, i + n, l);
-                            if (false === ret) return;
-                        }
-                        i += n;
-                        length = "";
-                    }
-                }
-                if (length != "") {
-                    return callback(err, 0, 1);
-                }
-            };
-            exports.encodePayloadAsArrayBuffer = function(packets, callback) {
-                if (!packets.length) {
-                    return callback(new ArrayBuffer(0));
-                }
-                function encodeOne(packet, doneCallback) {
-                    exports.encodePacket(packet, true, function(data) {
-                        return doneCallback(null, data);
-                    });
-                }
-                map(packets, encodeOne, function(err, encodedPackets) {
-                    var totalLength = encodedPackets.reduce(function(acc, p) {
-                        var len;
-                        if (typeof p === "string") {
-                            len = p.length;
-                        } else {
-                            len = p.byteLength;
-                        }
-                        return acc + len.toString().length + len + 2;
-                    }, 0);
-                    var resultArray = new Uint8Array(totalLength);
-                    var bufferIndex = 0;
-                    encodedPackets.forEach(function(p) {
-                        var isString = typeof p === "string";
-                        var ab = p;
-                        if (isString) {
-                            var view = new Uint8Array(p.length);
-                            for (var i = 0; i < p.length; i++) {
-                                view[i] = p.charCodeAt(i);
-                            }
-                            ab = view.buffer;
-                        }
-                        if (isString) {
-                            resultArray[bufferIndex++] = 0;
-                        } else {
-                            resultArray[bufferIndex++] = 1;
-                        }
-                        var lenStr = ab.byteLength.toString();
-                        for (var i = 0; i < lenStr.length; i++) {
-                            resultArray[bufferIndex++] = parseInt(lenStr[i]);
-                        }
-                        resultArray[bufferIndex++] = 255;
-                        var view = new Uint8Array(ab);
-                        for (var i = 0; i < view.length; i++) {
-                            resultArray[bufferIndex++] = view[i];
-                        }
-                    });
-                    return callback(resultArray.buffer);
-                });
-            };
-            exports.encodePayloadAsBlob = function(packets, callback) {
-                function encodeOne(packet, doneCallback) {
-                    exports.encodePacket(packet, true, function(encoded) {
-                        var binaryIdentifier = new Uint8Array(1);
-                        binaryIdentifier[0] = 1;
-                        if (typeof encoded === "string") {
-                            var view = new Uint8Array(encoded.length);
-                            for (var i = 0; i < encoded.length; i++) {
-                                view[i] = encoded.charCodeAt(i);
-                            }
-                            encoded = view.buffer;
-                            binaryIdentifier[0] = 0;
-                        }
-                        var len = encoded instanceof ArrayBuffer ? encoded.byteLength : encoded.size;
-                        var lenStr = len.toString();
-                        var lengthAry = new Uint8Array(lenStr.length + 1);
-                        for (var i = 0; i < lenStr.length; i++) {
-                            lengthAry[i] = parseInt(lenStr[i]);
-                        }
-                        lengthAry[lenStr.length] = 255;
-                        if (Blob) {
-                            var blob = new Blob([ binaryIdentifier.buffer, lengthAry.buffer, encoded ]);
-                            doneCallback(null, blob);
-                        }
-                    });
-                }
-                map(packets, encodeOne, function(err, results) {
-                    return callback(new Blob(results));
-                });
-            };
-            exports.decodePayloadAsBinary = function(data, binaryType, callback) {
-                if (typeof binaryType === "function") {
-                    callback = binaryType;
-                    binaryType = null;
-                }
-                var bufferTail = data;
-                var buffers = [];
-                while (bufferTail.byteLength > 0) {
-                    var tailArray = new Uint8Array(bufferTail);
-                    var isString = tailArray[0] === 0;
-                    var msgLength = "";
-                    for (var i = 1; ;i++) {
-                        if (tailArray[i] == 255) break;
-                        msgLength += tailArray[i];
-                    }
-                    bufferTail = sliceBuffer(bufferTail, 2 + msgLength.length);
-                    msgLength = parseInt(msgLength);
-                    var msg = sliceBuffer(bufferTail, 0, msgLength);
-                    if (isString) {
-                        try {
-                            msg = String.fromCharCode.apply(null, new Uint8Array(msg));
-                        } catch (e) {
-                            var typed = new Uint8Array(msg);
-                            msg = "";
-                            for (var i = 0; i < typed.length; i++) {
-                                msg += String.fromCharCode(typed[i]);
-                            }
-                        }
-                    }
-                    buffers.push(msg);
-                    bufferTail = sliceBuffer(bufferTail, msgLength);
-                }
-                var total = buffers.length;
-                buffers.forEach(function(buffer, i) {
-                    callback(exports.decodePacket(buffer, binaryType), i, total);
-                });
-            };
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {
-        "./keys": 16,
-        after: 17,
-        "arraybuffer.slice": 18,
-        "base64-arraybuffer": 19,
-        blob: 20,
-        utf8: 21
-    } ],
-    16: [ function(_dereq_, module, exports) {
-        module.exports = Object.keys || function keys(obj) {
-            var arr = [];
-            var has = Object.prototype.hasOwnProperty;
-            for (var i in obj) {
-                if (has.call(obj, i)) {
-                    arr.push(i);
-                }
+        }, that.iframe_close = function(e, abort_reason) {
+            iframeObj.cleanup(), that.iframe_close = iframeObj = null, delete _window[WPrefix][that.id], 
+            that.dispatchEvent(new SimpleEvent("close", {
+                reason: abort_reason
+            }));
+        }, iframeObj = constructor(url, function() {
+            that.iframe_close({}, "permanent");
+        });
+    };
+    HtmlfileReceiver.prototype = new REventTarget(), HtmlfileReceiver.prototype.abort = function() {
+        var that = this;
+        that.iframe_close && that.iframe_close({}, "user");
+    };
+    var XhrReceiver = function(url, AjaxObject) {
+        var that = this, buf_pos = 0;
+        that.xo = new AjaxObject("POST", url, null), that.xo.onchunk = function(status, text) {
+            if (200 === status) for (;;) {
+                var buf = text.slice(buf_pos), p = buf.indexOf("\n");
+                if (-1 === p) break;
+                buf_pos += p + 1;
+                var msg = buf.slice(0, p);
+                that.dispatchEvent(new SimpleEvent("message", {
+                    data: msg
+                }));
             }
-            return arr;
+        }, that.xo.onfinish = function(status, text) {
+            that.xo.onchunk(status, text), that.xo = null;
+            var reason = 200 === status ? "network" : "permanent";
+            that.dispatchEvent(new SimpleEvent("close", {
+                reason: reason
+            }));
         };
-    }, {} ],
-    17: [ function(_dereq_, module, exports) {
-        module.exports = after;
-        function after(count, callback, err_cb) {
-            var bail = false;
-            err_cb = err_cb || noop;
-            proxy.count = count;
-            return count === 0 ? callback() : proxy;
-            function proxy(err, result) {
-                if (proxy.count <= 0) {
-                    throw new Error("after called too many times");
-                }
-                --proxy.count;
-                if (err) {
-                    bail = true;
-                    callback(err);
-                    callback = err_cb;
-                } else if (proxy.count === 0 && !bail) {
-                    callback(null, result);
-                }
-            }
-        }
-        function noop() {}
-    }, {} ],
-    18: [ function(_dereq_, module, exports) {
-        module.exports = function(arraybuffer, start, end) {
-            var bytes = arraybuffer.byteLength;
-            start = start || 0;
-            end = end || bytes;
-            if (arraybuffer.slice) {
-                return arraybuffer.slice(start, end);
-            }
-            if (start < 0) {
-                start += bytes;
-            }
-            if (end < 0) {
-                end += bytes;
-            }
-            if (end > bytes) {
-                end = bytes;
-            }
-            if (start >= bytes || start >= end || bytes === 0) {
-                return new ArrayBuffer(0);
-            }
-            var abv = new Uint8Array(arraybuffer);
-            var result = new Uint8Array(end - start);
-            for (var i = start, ii = 0; i < end; i++, ii++) {
-                result[ii] = abv[i];
-            }
-            return result.buffer;
-        };
-    }, {} ],
-    19: [ function(_dereq_, module, exports) {
-        (function(chars) {
-            "use strict";
-            exports.encode = function(arraybuffer) {
-                var bytes = new Uint8Array(arraybuffer), i, len = bytes.length, base64 = "";
-                for (i = 0; i < len; i += 3) {
-                    base64 += chars[bytes[i] >> 2];
-                    base64 += chars[(bytes[i] & 3) << 4 | bytes[i + 1] >> 4];
-                    base64 += chars[(bytes[i + 1] & 15) << 2 | bytes[i + 2] >> 6];
-                    base64 += chars[bytes[i + 2] & 63];
-                }
-                if (len % 3 === 2) {
-                    base64 = base64.substring(0, base64.length - 1) + "=";
-                } else if (len % 3 === 1) {
-                    base64 = base64.substring(0, base64.length - 2) + "==";
-                }
-                return base64;
-            };
-            exports.decode = function(base64) {
-                var bufferLength = base64.length * .75, len = base64.length, i, p = 0, encoded1, encoded2, encoded3, encoded4;
-                if (base64[base64.length - 1] === "=") {
-                    bufferLength--;
-                    if (base64[base64.length - 2] === "=") {
-                        bufferLength--;
-                    }
-                }
-                var arraybuffer = new ArrayBuffer(bufferLength), bytes = new Uint8Array(arraybuffer);
-                for (i = 0; i < len; i += 4) {
-                    encoded1 = chars.indexOf(base64[i]);
-                    encoded2 = chars.indexOf(base64[i + 1]);
-                    encoded3 = chars.indexOf(base64[i + 2]);
-                    encoded4 = chars.indexOf(base64[i + 3]);
-                    bytes[p++] = encoded1 << 2 | encoded2 >> 4;
-                    bytes[p++] = (encoded2 & 15) << 4 | encoded3 >> 2;
-                    bytes[p++] = (encoded3 & 3) << 6 | encoded4 & 63;
-                }
-                return arraybuffer;
-            };
-        })("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
-    }, {} ],
-    20: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var BlobBuilder = global.BlobBuilder || global.WebKitBlobBuilder || global.MSBlobBuilder || global.MozBlobBuilder;
-            var blobSupported = function() {
-                try {
-                    var b = new Blob([ "hi" ]);
-                    return b.size == 2;
-                } catch (e) {
-                    return false;
-                }
-            }();
-            var blobBuilderSupported = BlobBuilder && BlobBuilder.prototype.append && BlobBuilder.prototype.getBlob;
-            function BlobBuilderConstructor(ary, options) {
-                options = options || {};
-                var bb = new BlobBuilder();
-                for (var i = 0; i < ary.length; i++) {
-                    bb.append(ary[i]);
-                }
-                return options.type ? bb.getBlob(options.type) : bb.getBlob();
-            }
-            module.exports = function() {
-                if (blobSupported) {
-                    return global.Blob;
-                } else if (blobBuilderSupported) {
-                    return BlobBuilderConstructor;
-                } else {
-                    return undefined;
-                }
-            }();
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {} ],
-    21: [ function(_dereq_, module, exports) {
-        (function(global) {
-            (function(root) {
-                var freeExports = typeof exports == "object" && exports;
-                var freeModule = typeof module == "object" && module && module.exports == freeExports && module;
-                var freeGlobal = typeof global == "object" && global;
-                if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
-                    root = freeGlobal;
-                }
-                var stringFromCharCode = String.fromCharCode;
-                function ucs2decode(string) {
-                    var output = [];
-                    var counter = 0;
-                    var length = string.length;
-                    var value;
-                    var extra;
-                    while (counter < length) {
-                        value = string.charCodeAt(counter++);
-                        if (value >= 55296 && value <= 56319 && counter < length) {
-                            extra = string.charCodeAt(counter++);
-                            if ((extra & 64512) == 56320) {
-                                output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
-                            } else {
-                                output.push(value);
-                                counter--;
-                            }
-                        } else {
-                            output.push(value);
-                        }
-                    }
-                    return output;
-                }
-                function ucs2encode(array) {
-                    var length = array.length;
-                    var index = -1;
-                    var value;
-                    var output = "";
-                    while (++index < length) {
-                        value = array[index];
-                        if (value > 65535) {
-                            value -= 65536;
-                            output += stringFromCharCode(value >>> 10 & 1023 | 55296);
-                            value = 56320 | value & 1023;
-                        }
-                        output += stringFromCharCode(value);
-                    }
-                    return output;
-                }
-                function createByte(codePoint, shift) {
-                    return stringFromCharCode(codePoint >> shift & 63 | 128);
-                }
-                function encodeCodePoint(codePoint) {
-                    if ((codePoint & 4294967168) == 0) {
-                        return stringFromCharCode(codePoint);
-                    }
-                    var symbol = "";
-                    if ((codePoint & 4294965248) == 0) {
-                        symbol = stringFromCharCode(codePoint >> 6 & 31 | 192);
-                    } else if ((codePoint & 4294901760) == 0) {
-                        symbol = stringFromCharCode(codePoint >> 12 & 15 | 224);
-                        symbol += createByte(codePoint, 6);
-                    } else if ((codePoint & 4292870144) == 0) {
-                        symbol = stringFromCharCode(codePoint >> 18 & 7 | 240);
-                        symbol += createByte(codePoint, 12);
-                        symbol += createByte(codePoint, 6);
-                    }
-                    symbol += stringFromCharCode(codePoint & 63 | 128);
-                    return symbol;
-                }
-                function utf8encode(string) {
-                    var codePoints = ucs2decode(string);
-                    var length = codePoints.length;
-                    var index = -1;
-                    var codePoint;
-                    var byteString = "";
-                    while (++index < length) {
-                        codePoint = codePoints[index];
-                        byteString += encodeCodePoint(codePoint);
-                    }
-                    return byteString;
-                }
-                function readContinuationByte() {
-                    if (byteIndex >= byteCount) {
-                        throw Error("Invalid byte index");
-                    }
-                    var continuationByte = byteArray[byteIndex] & 255;
-                    byteIndex++;
-                    if ((continuationByte & 192) == 128) {
-                        return continuationByte & 63;
-                    }
-                    throw Error("Invalid continuation byte");
-                }
-                function decodeSymbol() {
-                    var byte1;
-                    var byte2;
-                    var byte3;
-                    var byte4;
-                    var codePoint;
-                    if (byteIndex > byteCount) {
-                        throw Error("Invalid byte index");
-                    }
-                    if (byteIndex == byteCount) {
-                        return false;
-                    }
-                    byte1 = byteArray[byteIndex] & 255;
-                    byteIndex++;
-                    if ((byte1 & 128) == 0) {
-                        return byte1;
-                    }
-                    if ((byte1 & 224) == 192) {
-                        var byte2 = readContinuationByte();
-                        codePoint = (byte1 & 31) << 6 | byte2;
-                        if (codePoint >= 128) {
-                            return codePoint;
-                        } else {
-                            throw Error("Invalid continuation byte");
-                        }
-                    }
-                    if ((byte1 & 240) == 224) {
-                        byte2 = readContinuationByte();
-                        byte3 = readContinuationByte();
-                        codePoint = (byte1 & 15) << 12 | byte2 << 6 | byte3;
-                        if (codePoint >= 2048) {
-                            return codePoint;
-                        } else {
-                            throw Error("Invalid continuation byte");
-                        }
-                    }
-                    if ((byte1 & 248) == 240) {
-                        byte2 = readContinuationByte();
-                        byte3 = readContinuationByte();
-                        byte4 = readContinuationByte();
-                        codePoint = (byte1 & 15) << 18 | byte2 << 12 | byte3 << 6 | byte4;
-                        if (codePoint >= 65536 && codePoint <= 1114111) {
-                            return codePoint;
-                        }
-                    }
-                    throw Error("Invalid UTF-8 detected");
-                }
-                var byteArray;
-                var byteCount;
-                var byteIndex;
-                function utf8decode(byteString) {
-                    byteArray = ucs2decode(byteString);
-                    byteCount = byteArray.length;
-                    byteIndex = 0;
-                    var codePoints = [];
-                    var tmp;
-                    while ((tmp = decodeSymbol()) !== false) {
-                        codePoints.push(tmp);
-                    }
-                    return ucs2encode(codePoints);
-                }
-                var utf8 = {
-                    version: "2.0.0",
-                    encode: utf8encode,
-                    decode: utf8decode
-                };
-                if (freeExports && !freeExports.nodeType) {
-                    if (freeModule) {
-                        freeModule.exports = utf8;
-                    } else {
-                        var object = {};
-                        var hasOwnProperty = object.hasOwnProperty;
-                        for (var key in utf8) {
-                            hasOwnProperty.call(utf8, key) && (freeExports[key] = utf8[key]);
-                        }
-                    }
-                } else {
-                    root.utf8 = utf8;
-                }
-            })(this);
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {} ],
-    22: [ function(_dereq_, module, exports) {
-        var global = _dereq_("global");
-        try {
-            module.exports = "XMLHttpRequest" in global && "withCredentials" in new global.XMLHttpRequest();
-        } catch (err) {
-            module.exports = false;
-        }
-    }, {
-        global: 23
-    } ],
-    23: [ function(_dereq_, module, exports) {
-        module.exports = function() {
-            return this;
-        }();
-    }, {} ],
-    24: [ function(_dereq_, module, exports) {
-        var indexOf = [].indexOf;
-        module.exports = function(arr, obj) {
-            if (indexOf) return arr.indexOf(obj);
-            for (var i = 0; i < arr.length; ++i) {
-                if (arr[i] === obj) return i;
-            }
-            return -1;
-        };
-    }, {} ],
-    25: [ function(_dereq_, module, exports) {
-        (function(global) {
-            var rvalidchars = /^[\],:{}\s]*$/;
-            var rvalidescape = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
-            var rvalidtokens = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
-            var rvalidbraces = /(?:^|:|,)(?:\s*\[)+/g;
-            var rtrimLeft = /^\s+/;
-            var rtrimRight = /\s+$/;
-            module.exports = function parsejson(data) {
-                if ("string" != typeof data || !data) {
-                    return null;
-                }
-                data = data.replace(rtrimLeft, "").replace(rtrimRight, "");
-                if (global.JSON && JSON.parse) {
-                    return JSON.parse(data);
-                }
-                if (rvalidchars.test(data.replace(rvalidescape, "@").replace(rvalidtokens, "]").replace(rvalidbraces, ""))) {
-                    return new Function("return " + data)();
-                }
-            };
-        }).call(this, typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {});
-    }, {} ],
-    26: [ function(_dereq_, module, exports) {
-        exports.encode = function(obj) {
-            var str = "";
-            for (var i in obj) {
-                if (obj.hasOwnProperty(i)) {
-                    if (str.length) str += "&";
-                    str += encodeURIComponent(i) + "=" + encodeURIComponent(obj[i]);
-                }
-            }
-            return str;
-        };
-        exports.decode = function(qs) {
-            var qry = {};
-            var pairs = qs.split("&");
-            for (var i = 0, l = pairs.length; i < l; i++) {
-                var pair = pairs[i].split("=");
-                qry[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1]);
-            }
-            return qry;
-        };
-    }, {} ],
-    27: [ function(_dereq_, module, exports) {
-        var re = /^(?:(?![^:@]+:[^:@\/]*@)(http|https|ws|wss):\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?((?:[a-f0-9]{0,4}:){2,7}[a-f0-9]{0,4}|[^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/;
-        var parts = [ "source", "protocol", "authority", "userInfo", "user", "password", "host", "port", "relative", "path", "directory", "file", "query", "anchor" ];
-        module.exports = function parseuri(str) {
-            var m = re.exec(str || ""), uri = {}, i = 14;
-            while (i--) {
-                uri[parts[i]] = m[i] || "";
-            }
-            return uri;
-        };
-    }, {} ],
-    28: [ function(_dereq_, module, exports) {
-        var global = function() {
-            return this;
-        }();
-        var WebSocket = global.WebSocket || global.MozWebSocket;
-        module.exports = WebSocket ? ws : null;
-        function ws(uri, protocols, opts) {
-            var instance;
-            if (protocols) {
-                instance = new WebSocket(uri, protocols);
-            } else {
-                instance = new WebSocket(uri);
-            }
-            return instance;
-        }
-        if (WebSocket) ws.prototype = WebSocket.prototype;
-    }, {} ]
-}, {}, [ 1 ]);
+    };
+    return XhrReceiver.prototype = new REventTarget(), XhrReceiver.prototype.abort = function() {
+        var that = this;
+        that.xo && (that.xo.close(), that.dispatchEvent(new SimpleEvent("close", {
+            reason: "user"
+        })), that.xo = null);
+    }, SockJS.getUtils = function() {
+        return utils;
+    }, SockJS.getIframeTransport = function() {
+        return IframeTransport;
+    }, SockJS;
+}(), "_sockjs_onload" in window && setTimeout(_sockjs_onload, 1), "function" == typeof define && define.amd && define("sockjs", [], function() {
+    return SockJS;
+});

@@ -3,3 +3,13 @@ node_js:
   - '0.10'
 
 before_install: 'travis/setup.sh'
+
+deploy:
+  provider: releases
+  api-key:
+    secure: "AFIaZ7IHSP81MWJmjRUKrnu5Wm3GhBQQDkT6ixlRbaSc+B5RYGUPqqPEUvQS9Fjnn+FvNo/awbOfn5qzHYsC10xQPiH7hyIqlZs8C+Q3eU7pLqD5QFwNZk6oeSI2TUpfSLEHA7b4wWMn/lEFQKfGxsmTEYIjefKKq55aBuByKys="
+  file: "dist/openfire.js"
+  skip_cleanup: true
+  on:
+    tags: true
+    all_branches: true
