@@ -1,17 +1,18 @@
-# OpenFireJS [![Build Status](https://secure.travis-ci.org/peterwilli/openfirejs.png?branch=master)](https://travis-ci.org/peterwilli/openfirejs)
+# OpenFire JS SDK [![Build Status](https://travis-ci.org/OpenFireHQ/JS-SDK.svg?branch=master)](https://travis-ci.org/OpenFireHQ/JS-SDK)
 
 > JS SDK for OpenFire Realtime DB
 
 ### Getting started
 
-`npm install openfirejs`
+- Please see instructions at [OpenFire Server](https://github.com/OpenFireHQ/Server#getting-started)
+  for info on how to get started with the JS SDK
 
 
-### Testing 
+### Testing
 
 watches for file changes and reruns tests each time
 ```bash
-  $ grunt watch 
+  $ grunt watch
 ```
 
 runs spec tests
@@ -21,9 +22,9 @@ runs spec tests
 
 produces coverage report (needs explicit piping)
 ```bash
-  $ grunt cov   
+  $ grunt cov
 ```
 
 ## License
 
-MIT
+GPLv2
