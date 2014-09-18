@@ -193,9 +193,17 @@ class OpenFire
 
       DEBUG and log "base url: #{@baseUrl}"
 
-      po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
+      if PLATFORM is 'browser'
 
-      })
+        po.realtimeEngine = realtimeEngine = OFRealtimeEngine.connect(@baseUrl, {
+
+        })
+
+      if PLATFORM is 'node'
+        Primus = require "primus"
+
+        Socket = Primus.createSocket(transformer: "engine.io", parser: "json", pathname: "/realtime")
+        po.realtimeEngine = realtimeEngine = new Socket(@baseUrl)
 
       realtimeEngine.on("end", =>
         DEBUG and log "Disconnected from realtime server"

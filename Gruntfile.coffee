@@ -137,6 +137,7 @@ module.exports = (grunt) ->
           compress: {
             global_defs: {
               "DEBUG": true
+              "PLATFORM": "browser"
             },
             dead_code: false
           }
@@ -152,6 +153,7 @@ module.exports = (grunt) ->
           compress: {
             global_defs: {
               "DEBUG": false
+              "PLATFORM": "browser"
             },
             dead_code: true
           }
@@ -166,6 +168,7 @@ module.exports = (grunt) ->
           compress: {
             global_defs: {
               "DEBUG": true
+              "PLATFORM": "node"
             },
             dead_code: false
           }
@@ -181,6 +184,7 @@ module.exports = (grunt) ->
           compress: {
             global_defs: {
               "DEBUG": false
+              "PLATFORM": "node"
             },
             dead_code: true
           }
