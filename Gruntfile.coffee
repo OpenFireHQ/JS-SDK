@@ -3,6 +3,7 @@ module.exports = (grunt) ->
   # Require all grunt plugins at once
   require('load-grunt-tasks')(grunt)
   grunt.loadNpmTasks('grunt-contrib-uglify')
+  grunt.loadNpmTasks('grunt-contrib-copy')
   grunt.loadNpmTasks('grunt-http-server')
 
   ###
@@ -18,9 +19,9 @@ module.exports = (grunt) ->
   grunt.registerTask 'server',           [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
 
   grunt.registerTask 'build-browser',    [ 'coffee:dist-browser', 'uglify:dist-browser', 'test-browser' ]
-  grunt.registerTask 'build-node',       [ 'coffee:dist-node', 'uglify:dist-node', 'test-node' ]
+  grunt.registerTask 'build-node',       [ 'coffee:dist-node', 'uglify:dist-node', 'copy:main-node', 'test-node' ]
 
-  grunt.registerTask 'build-dev-node',   [ 'coffee:dist-node', 'uglify:dev-node', 'test-node' ]
+  grunt.registerTask 'build-dev-node',   [ 'coffee:dist-node', 'uglify:dev-node', 'copy:main-node', 'test-node' ]
   grunt.registerTask 'build-dev-browser',[ 'coffee:dist-browser', 'uglify:dev-browser', 'test-browser' ]
 
   grunt.registerTask 'build',            [ 'clean', 'build-browser', 'build-node', 'test' ]
@@ -30,6 +31,12 @@ module.exports = (grunt) ->
   # config
   ###
   grunt.initConfig
+
+    copy:
+      "main-node":
+        files: [
+          {expand: true, flatten: true, src: ['dist/openfire-node.js'], dest: 'openfire-client/', filter: 'isFile'},
+        ]
 
     jasmine: {
       "spec-browser": {

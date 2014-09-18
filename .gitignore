@@ -1,3 +1,4 @@
 node_modules/
 dist/
 .DS_Store
+openfire-client/openfire-node.js
