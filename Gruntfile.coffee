@@ -11,7 +11,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'lint',             [ 'coffeelint' ]
 
   grunt.registerTask 'test-browser',     [ 'coffee:specDist-browser', 'jasmine:spec-browser', 'lint' ]
-  grunt.registerTask 'test-node',        [ 'coffee:specDist-node', 'jasmine:spec-node', 'lint' ]
+  grunt.registerTask 'test-node',        [ 'coffee:specDist-node', 'lint' ]
   grunt.registerTask 'test',             [ 'test-node', 'test-browser' ]
   grunt.registerTask 'cov',              [ 'mochacov:cov' ]
   grunt.registerTask 'default',          [ 'test' ]
@@ -36,13 +36,6 @@ module.exports = (grunt) ->
         src: 'dist/openfire.js',
         options: {
           specs: 'dist/spec-browser.js',
-          helpers: 'spec/*Helper.js'
-        }
-      }
-      "spec-node": {
-        src: 'dist/openfire-node.js',
-        options: {
-          specs: 'dist/spec-node.js',
           helpers: 'spec/*Helper.js'
         }
       }
@@ -129,7 +122,7 @@ module.exports = (grunt) ->
 
       "dist-node":
         files:
-          'dist/coffee_concat.js' : ['src/*.coffee', 'src/queues/*.coffee', 'src/node_only/*.coffee']
+          'dist/coffee_concat.js' : ['src/other/node_header.coffee', 'src/*.coffee', 'src/queues/*.coffee', 'src/node_only/*.coffee']
 
     uglify: {
       "dev-browser": {
