@@ -1,3 +1,6 @@
+if not window?
+  window = global
+
 class QueueEntry
 
   constructor: (@action, @path, @obj) ->

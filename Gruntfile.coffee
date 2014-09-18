@@ -8,13 +8,23 @@ module.exports = (grunt) ->
   ###
   # tasks
   ###
-  grunt.registerTask 'lint',    [ 'coffeelint' ]
-  grunt.registerTask 'test',    [ 'coffee:specDist', 'jasmine:spec', 'lint' ]
-  grunt.registerTask 'cov',     [ 'mochacov:cov' ]
-  grunt.registerTask 'default', [ 'test' ]
-  grunt.registerTask 'server',  [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
-  grunt.registerTask 'build',   [ 'clean', 'coffee:dist', 'uglify:dist', 'test' ]
-  grunt.registerTask 'build-dev',   [ 'clean', 'coffee:dist', 'uglify:dev', 'test' ]
+  grunt.registerTask 'lint',             [ 'coffeelint' ]
+
+  grunt.registerTask 'test-browser',     [ 'coffee:specDist-browser', 'jasmine:spec-browser', 'lint' ]
+  grunt.registerTask 'test-node',        [ 'coffee:specDist-node', 'jasmine:spec-node', 'lint' ]
+  grunt.registerTask 'test',             [ 'test-node', 'test-browser' ]
+  grunt.registerTask 'cov',              [ 'mochacov:cov' ]
+  grunt.registerTask 'default',          [ 'test' ]
+  grunt.registerTask 'server',           [ 'test', 'clean', 'coffee:dist', 'uglify:dev', 'http-server:dev' ]
+
+  grunt.registerTask 'build-browser',    [ 'coffee:dist-browser', 'uglify:dist-browser', 'test-browser' ]
+  grunt.registerTask 'build-node',       [ 'coffee:dist-node', 'uglify:dist-node', 'test-node' ]
+
+  grunt.registerTask 'build-dev-node',   [ 'coffee:dist-node', 'uglify:dev-node', 'test-node' ]
+  grunt.registerTask 'build-dev-browser',[ 'coffee:dist-browser', 'uglify:dev-browser', 'test-browser' ]
+
+  grunt.registerTask 'build',            [ 'clean', 'build-browser', 'build-node', 'uglify:dist', 'test' ]
+  grunt.registerTask 'build-dev',        [ 'clean', 'build-dev-browser', 'build-dev-node', 'test' ]
 
   ###
   # config
@@ -22,10 +32,17 @@ module.exports = (grunt) ->
   grunt.initConfig
 
     jasmine: {
-      spec: {
+      "spec-browser": {
         src: 'dist/openfire.js',
         options: {
-          specs: 'dist/spec.js',
+          specs: 'dist/spec-browser.js',
+          helpers: 'spec/*Helper.js'
+        }
+      }
+      "spec-node": {
+        src: 'dist/openfire-node.js',
+        options: {
+          specs: 'dist/spec-node.js',
           helpers: 'spec/*Helper.js'
         }
       }
@@ -98,16 +115,24 @@ module.exports = (grunt) ->
     coffee:
       options: join: true
 
-      specDist:
+      "specDist-browser":
         files:
-          'dist/spec.js' : 'spec/*.coffee'
+          'dist/spec-browser.js' : 'spec/browser_js_only/*.coffee'
 
-      dist:
+      "specDist-node":
         files:
-          'dist/coffee_concat.js' : 'src/**/*.coffee'
+          'dist/spec-node.js' : 'spec/node_only/*.coffee'
+
+      "dist-browser":
+        files:
+          'dist/coffee_concat.js' : ['src/*.coffee', 'src/queues/*.coffee', 'src/browser_js_only/*.coffee']
+
+      "dist-node":
+        files:
+          'dist/coffee_concat.js' : ['src/*.coffee', 'src/queues/*.coffee', 'src/node_only/*.coffee']
 
     uglify: {
-      dev: {
+      "dev-browser": {
         options: {
           compress: {
             global_defs: {
@@ -119,10 +144,10 @@ module.exports = (grunt) ->
           mangle: off
         },
         files: {
-          'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
+          'dist/openfire.js': ['dist/coffee_concat.js', 'src/browser_js_only/*.js']
         }
       }
-      dist: {
+      "dist-browser": {
         options: {
           compress: {
             global_defs: {
@@ -133,7 +158,36 @@ module.exports = (grunt) ->
           mangle: on
         },
         files: {
-          'dist/openfire.js': ['dist/coffee_concat.js', 'src/libraries/*.js']
+          'dist/openfire.js': ['dist/coffee_concat.js', 'src/browser_js_only/*.js']
+        }
+      }
+      "dev-node": {
+        options: {
+          compress: {
+            global_defs: {
+              "DEBUG": true
+            },
+            dead_code: false
+          }
+          beautify: on
+          mangle: off
+        },
+        files: {
+          'dist/openfire-node.js': ['dist/coffee_concat.js', 'src/node_only/*.js']
+        }
+      }
+      "dist-node": {
+        options: {
+          compress: {
+            global_defs: {
+              "DEBUG": false
+            },
+            dead_code: true
+          }
+          mangle: on
+        },
+        files: {
+          'dist/openfire-node.js': ['dist/coffee_concat.js', 'src/node_only/*.js']
         }
       }
     }
