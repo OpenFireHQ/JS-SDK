@@ -23,7 +23,7 @@ module.exports = (grunt) ->
   grunt.registerTask 'build-dev-node',   [ 'coffee:dist-node', 'uglify:dev-node', 'test-node' ]
   grunt.registerTask 'build-dev-browser',[ 'coffee:dist-browser', 'uglify:dev-browser', 'test-browser' ]
 
-  grunt.registerTask 'build',            [ 'clean', 'build-browser', 'build-node', 'uglify:dist', 'test' ]
+  grunt.registerTask 'build',            [ 'clean', 'build-browser', 'build-node', 'test' ]
   grunt.registerTask 'build-dev',        [ 'clean', 'build-dev-browser', 'build-dev-node', 'test' ]
 
   ###
